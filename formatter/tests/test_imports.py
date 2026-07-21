@@ -31,7 +31,6 @@ def test_sorts_standard_third_party_and_first_party_groups() -> None:
 
         from project.domain.article import Article
 
-
         value = 1
         """
     ).lstrip()
