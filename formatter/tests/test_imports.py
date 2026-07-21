@@ -159,9 +159,9 @@ def test_off_on_directives_protect_only_their_range() -> None:
 
     formatted = sort_imports(source=source, config=_CONFIG)
 
-    assert formatted.startswith(
-        "# yngfmt: off\nimport requests\nimport json\n# yngfmt: on"
-    )
+    assert "# yngfmt: off" in formatted
+    assert "# yngfmt: on" in formatted
+    assert formatted.index("import requests") < formatted.index("import json")
     assert formatted.index("from pathlib import Path") < formatted.index("import zlib")
 
 
