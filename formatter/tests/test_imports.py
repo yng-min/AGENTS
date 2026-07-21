@@ -99,10 +99,76 @@ def test_preserves_inline_comments_and_multiline_imports() -> None:
     assert formatted.startswith("from project.language")
 
 
-def test_skips_explicit_keep_imports_directive() -> None:
+def test_standalone_keep_imports_protects_immediate_block() -> None:
     source = dedent(
         """
         # yngfmt: keep-imports
+        import requests
+        import json
+        """
+    ).lstrip()
+
+    assert sort_imports(source=source, config=_CONFIG) == source
+
+
+def test_blank_line_ends_standalone_keep_imports_effect() -> None:
+    source = dedent(
+        """
+        # yngfmt: keep-imports
+
+        import requests
+        import json
+        """
+    ).lstrip()
+
+    formatted = sort_imports(source=source, config=_CONFIG)
+
+    assert formatted.index("import json") < formatted.index("import requests")
+
+
+def test_inline_keep_imports_pins_only_that_import() -> None:
+    source = dedent(
+        """
+        import requests
+        import zlib  # yngfmt: keep-imports
+        import json
+        from pathlib import Path
+        """
+    ).lstrip()
+
+    formatted = sort_imports(source=source, config=_CONFIG)
+    lines = formatted.splitlines()
+
+    assert lines[1] == "import zlib  # yngfmt: keep-imports"
+    assert lines[0] == "import requests"
+    assert lines[2] == "from pathlib import Path"
+    assert lines[3] == "import json"
+
+
+def test_off_on_directives_protect_only_their_range() -> None:
+    source = dedent(
+        """
+        # yngfmt: off
+        import requests
+        import json
+        # yngfmt: on
+        import zlib
+        from pathlib import Path
+        """
+    ).lstrip()
+
+    formatted = sort_imports(source=source, config=_CONFIG)
+
+    assert formatted.startswith(
+        "# yngfmt: off\nimport requests\nimport json\n# yngfmt: on"
+    )
+    assert formatted.index("from pathlib import Path") < formatted.index("import zlib")
+
+
+def test_skip_file_disables_import_sorting() -> None:
+    source = dedent(
+        """
+        # yngfmt: skip-file
         import requests
         import json
         """
