@@ -1,4 +1,4 @@
-# Decision Making Principles (Korean) - v1 (260709)
+# yngmin's Decision Making Principles (Korean) - v1 (260709)
 
 ## 0. 문서의 목적
 
