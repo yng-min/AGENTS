@@ -30,5 +30,12 @@ jobs:
         working-directory: formatter
 
       - name: Run tests
-        run: pytest
+        run: pytest | tee pytest-output.txt
         working-directory: formatter
+
+      - name: Upload pytest output
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pytest-output
+          path: formatter/pytest-output.txt
