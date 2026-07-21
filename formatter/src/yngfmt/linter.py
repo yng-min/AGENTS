@@ -4,14 +4,13 @@ Style guide linter engine.
 
 from __future__ import annotations
 
-import ast
-import io
-import re
-import sys
-import tokenize
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable, Sequence
+import ast
+import io
+import re
+import tokenize
 
 
 _SNAKE_CASE_PATTERN = re.compile(r"^[a-z_][a-z0-9_]*$")
@@ -56,7 +55,6 @@ class StyleGuideVisitor(ast.NodeVisitor):
     def visit_ClassDef(self, node: ast.ClassDef) -> None:
         if not _PASCAL_CASE_PATTERN.fullmatch(node.name):
             self.add(node, "YNG201", "class name must use PascalCase")
-
         self.generic_visit(node)
 
     def visit_FunctionDef(self, node: ast.FunctionDef) -> None:
@@ -79,7 +77,6 @@ class StyleGuideVisitor(ast.NodeVisitor):
                 "YNG203",
                 "boolean variable should use is_/has_/can_/should_ prefix"
             )
-
         self.generic_visit(node)
 
     def _check_function(self, node: ast.FunctionDef | ast.AsyncFunctionDef) -> None:
@@ -124,15 +121,24 @@ def _docstring_positions(tree: ast.AST) -> set[tuple[int, int]]:
             and isinstance(first_statement.value, ast.Constant)
             and isinstance(first_statement.value.value, str)
         ):
-            positions.add(
-                (first_statement.value.lineno, first_statement.value.col_offset)
-            )
+            positions.add((first_statement.value.lineno, first_statement.value.col_offset))
+    return positions
+
+
+def _subscript_string_positions(tree: ast.AST) -> set[tuple[int, int]]:
+    positions: set[tuple[int, int]] = set()
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Subscript):
+            continue
+        if isinstance(node.slice, ast.Constant) and isinstance(node.slice.value, str):
+            positions.add((node.slice.lineno, node.slice.col_offset))
     return positions
 
 
 def _check_tokens(source: str, path: Path, tree: ast.AST) -> list[Diagnostic]:
     diagnostics: list[Diagnostic] = []
     docstring_positions = _docstring_positions(tree)
+    subscript_positions = _subscript_string_positions(tree)
     tokens = list(tokenize.generate_tokens(io.StringIO(source).readline))
 
     for token in tokens:
@@ -150,7 +156,12 @@ def _check_tokens(source: str, path: Path, tree: ast.AST) -> list[Diagnostic]:
             diagnostics.append(
                 Diagnostic(path, token.start[0], token.start[1] + 1, "YNG102", "docstring must use triple double quotes")
             )
-        elif not is_docstring and "f" not in prefix.lower() and quote in {"'", "'''"}:
+        elif (
+            not is_docstring
+            and position not in subscript_positions
+            and "f" not in prefix.lower()
+            and quote in {"'", "'''"}
+        ):
             diagnostics.append(
                 Diagnostic(path, token.start[0], token.start[1] + 1, "YNG101", "string must use double quotes")
             )
@@ -167,7 +178,6 @@ def _check_tokens(source: str, path: Path, tree: ast.AST) -> list[Diagnostic]:
 def _check_subscript_quotes(source: str, path: Path, tree: ast.AST) -> list[Diagnostic]:
     diagnostics: list[Diagnostic] = []
     lines = source.splitlines()
-
     for node in ast.walk(tree):
         if not isinstance(node, ast.Subscript):
             continue
@@ -192,36 +202,51 @@ def _check_subscript_quotes(source: str, path: Path, tree: ast.AST) -> list[Diag
                     "dictionary key access must use single quotes"
                 )
             )
-
     return diagnostics
+
+
+def _import_root(node: ast.Import | ast.ImportFrom) -> str:
+    if isinstance(node, ast.ImportFrom):
+        return (node.module or "").split(".")[0]
+    return node.names[0].name.split(".")[0]
 
 
 def _check_import_order(path: Path, tree: ast.Module) -> list[Diagnostic]:
     diagnostics: list[Diagnostic] = []
-    imports = [node for node in tree.body if isinstance(node, (ast.Import, ast.ImportFrom))]
+    imports = [
+        node
+        for node in tree.body
+        if isinstance(node, (ast.Import, ast.ImportFrom))
+        and not (isinstance(node, ast.ImportFrom) and node.module == "__future__")
+    ]
 
+    previous_node: ast.Import | ast.ImportFrom | None = None
     previous_kind: int | None = None
     previous_root: str | None = None
     for node in imports:
+        starts_new_group = (
+            previous_node is None
+            or node.lineno > getattr(previous_node, "end_lineno", previous_node.lineno) + 1
+        )
+        if starts_new_group:
+            previous_kind = None
+            previous_root = None
+
         kind = 0 if isinstance(node, ast.ImportFrom) else 1
         if previous_kind is not None and kind < previous_kind:
             diagnostics.append(
-                Diagnostic(path, node.lineno, node.col_offset + 1, "YNG401", "from imports must appear before plain imports in the same section")
+                Diagnostic(path, node.lineno, node.col_offset + 1, "YNG401", "from imports must appear before plain imports in the same group")
             )
 
-        if isinstance(node, ast.ImportFrom):
-            root = (node.module or "").split(".")[0]
-        else:
-            root = node.names[0].name.split(".")[0]
-
+        root = _import_root(node)
         if previous_root is not None and kind == previous_kind and root.lower() < previous_root.lower():
             diagnostics.append(
                 Diagnostic(path, node.lineno, node.col_offset + 1, "YNG402", "imports must be sorted alphabetically by root module")
             )
 
+        previous_node = node
         previous_kind = kind
         previous_root = root
-
     return diagnostics
 
 
@@ -244,7 +269,6 @@ def lint_code(source: str, path: Path = Path("<string>")) -> list[Diagnostic]:
 
     visitor = StyleGuideVisitor(path=path)
     visitor.visit(tree)
-
     diagnostics = [
         *visitor.diagnostics,
         *_check_tokens(source=source, path=path, tree=tree),
