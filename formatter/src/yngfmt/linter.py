@@ -4,13 +4,15 @@ Style guide linter engine.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-from pathlib import Path
-from typing import Iterable, Sequence
 import ast
 import io
 import re
 import tokenize
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Iterable, Sequence
+
+from yngfmt.imports import ImportConfig, check_imports
 
 
 _SNAKE_CASE_PATTERN = re.compile(r"^[a-z_][a-z0-9_]*$")
@@ -154,7 +156,13 @@ def _check_tokens(source: str, path: Path, tree: ast.AST) -> list[Diagnostic]:
 
         if is_docstring and quote != '"""':
             diagnostics.append(
-                Diagnostic(path, token.start[0], token.start[1] + 1, "YNG102", "docstring must use triple double quotes")
+                Diagnostic(
+                    path,
+                    token.start[0],
+                    token.start[1] + 1,
+                    "YNG102",
+                    "docstring must use triple double quotes"
+                )
             )
         elif (
             not is_docstring
@@ -163,15 +171,26 @@ def _check_tokens(source: str, path: Path, tree: ast.AST) -> list[Diagnostic]:
             and quote in {"'", "'''"}
         ):
             diagnostics.append(
-                Diagnostic(path, token.start[0], token.start[1] + 1, "YNG101", "string must use double quotes")
+                Diagnostic(
+                    path,
+                    token.start[0],
+                    token.start[1] + 1,
+                    "YNG101",
+                    "string must use double quotes"
+                )
             )
 
     for line_number, line in enumerate(source.splitlines(), start=1):
         if "\t" in line:
             diagnostics.append(
-                Diagnostic(path, line_number, line.index("\t") + 1, "YNG001", "tabs are not allowed")
+                Diagnostic(
+                    path,
+                    line_number,
+                    line.index("\t") + 1,
+                    "YNG001",
+                    "tabs are not allowed"
+                )
             )
-
     return diagnostics
 
 
@@ -205,52 +224,11 @@ def _check_subscript_quotes(source: str, path: Path, tree: ast.AST) -> list[Diag
     return diagnostics
 
 
-def _import_root(node: ast.Import | ast.ImportFrom) -> str:
-    if isinstance(node, ast.ImportFrom):
-        return (node.module or "").split(".")[0]
-    return node.names[0].name.split(".")[0]
-
-
-def _check_import_order(path: Path, tree: ast.Module) -> list[Diagnostic]:
-    diagnostics: list[Diagnostic] = []
-    imports = [
-        node
-        for node in tree.body
-        if isinstance(node, (ast.Import, ast.ImportFrom))
-        and not (isinstance(node, ast.ImportFrom) and node.module == "__future__")
-    ]
-
-    previous_node: ast.Import | ast.ImportFrom | None = None
-    previous_kind: int | None = None
-    previous_root: str | None = None
-    for node in imports:
-        starts_new_group = (
-            previous_node is None
-            or node.lineno > getattr(previous_node, "end_lineno", previous_node.lineno) + 1
-        )
-        if starts_new_group:
-            previous_kind = None
-            previous_root = None
-
-        kind = 0 if isinstance(node, ast.ImportFrom) else 1
-        if previous_kind is not None and kind < previous_kind:
-            diagnostics.append(
-                Diagnostic(path, node.lineno, node.col_offset + 1, "YNG401", "from imports must appear before plain imports in the same group")
-            )
-
-        root = _import_root(node)
-        if previous_root is not None and kind == previous_kind and root.lower() < previous_root.lower():
-            diagnostics.append(
-                Diagnostic(path, node.lineno, node.col_offset + 1, "YNG402", "imports must be sorted alphabetically by root module")
-            )
-
-        previous_node = node
-        previous_kind = kind
-        previous_root = root
-    return diagnostics
-
-
-def lint_code(source: str, path: Path = Path("<string>")) -> list[Diagnostic]:
+def lint_code(
+    source: str,
+    path: Path = Path("<string>"),
+    import_config: ImportConfig = ImportConfig()
+) -> list[Diagnostic]:
     """
     Lint Python source and return sorted diagnostics.
     """
@@ -269,11 +247,21 @@ def lint_code(source: str, path: Path = Path("<string>")) -> list[Diagnostic]:
 
     visitor = StyleGuideVisitor(path=path)
     visitor.visit(tree)
+    import_diagnostics = [
+        Diagnostic(
+            path=path,
+            line=issue.line,
+            column=issue.column,
+            code=issue.code,
+            message=issue.message
+        )
+        for issue in check_imports(source=source, config=import_config)
+    ]
     diagnostics = [
         *visitor.diagnostics,
         *_check_tokens(source=source, path=path, tree=tree),
         *_check_subscript_quotes(source=source, path=path, tree=tree),
-        *_check_import_order(path=path, tree=tree)
+        *import_diagnostics
     ]
     return sorted(diagnostics, key=lambda item: (item.line, item.column, item.code))
 
@@ -289,9 +277,12 @@ def iter_python_files(paths: Sequence[Path]) -> Iterable[Path]:
             yield from sorted(path.rglob("*.py"))
 
 
-def lint_path(path: Path) -> list[Diagnostic]:
+def lint_path(
+    path: Path,
+    import_config: ImportConfig = ImportConfig()
+) -> list[Diagnostic]:
     """
     Lint one Python file.
     """
     source = path.read_text(encoding="utf-8")
-    return lint_code(source=source, path=path)
+    return lint_code(source=source, path=path, import_config=import_config)
