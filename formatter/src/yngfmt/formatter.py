@@ -9,6 +9,7 @@ from pathlib import Path
 
 import black
 
+from yngfmt.imports import ImportConfig, sort_imports
 from yngfmt.transforms import apply_custom_transforms
 
 
@@ -22,7 +23,12 @@ class FormatResult:
     source: str
 
 
-def format_code(source: str, *, line_length: int = 88) -> str:
+def format_code(
+    source: str,
+    *,
+    line_length: int = 88,
+    import_config: ImportConfig = ImportConfig()
+) -> str:
     """
     Format Python source according to the supported guide rules.
     """
@@ -31,12 +37,16 @@ def format_code(source: str, *, line_length: int = 88) -> str:
         black_formatted = black.format_file_contents(
             source,
             fast=False,
-            mode=mode,
+            mode=mode
         )
     except black.NothingChanged:
         black_formatted = source
 
-    return apply_custom_transforms(black_formatted)
+    import_formatted = sort_imports(
+        source=black_formatted,
+        config=import_config
+    )
+    return apply_custom_transforms(import_formatted)
 
 
 def format_path(
@@ -44,12 +54,17 @@ def format_path(
     *,
     check: bool = False,
     line_length: int = 88,
+    import_config: ImportConfig = ImportConfig()
 ) -> FormatResult:
     """
     Format one Python file and optionally write the result.
     """
     source = path.read_text(encoding="utf-8")
-    formatted_source = format_code(source, line_length=line_length)
+    formatted_source = format_code(
+        source,
+        line_length=line_length,
+        import_config=import_config
+    )
     changed = source != formatted_source
 
     if changed and not check:
