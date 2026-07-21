@@ -48,6 +48,20 @@ def test_preserves_bytes_and_prefixed_strings() -> None:
     assert format_code(source) == 'payload = b"abc"\npattern = r"\\d+"\n'
 
 
+def test_preserves_triple_quoted_docstring() -> None:
+    source = dedent(
+        '''
+        def load() -> None:
+            """
+            Load data.
+            """
+            return None
+        '''
+    ).lstrip()
+
+    assert format_code(source) == source
+
+
 def test_is_idempotent() -> None:
     source = "data={'name':'test'}\nvalue=data[\"name\"]\n"
     formatted_source = format_code(source)
