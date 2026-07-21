@@ -62,6 +62,18 @@ def test_preserves_triple_quoted_docstring() -> None:
     assert format_code(source) == source
 
 
+def test_uses_one_space_before_inline_comment() -> None:
+    source = "value = 1  # explanation\n"
+
+    assert format_code(source) == "value = 1 # explanation\n"
+
+
+def test_uses_one_space_before_inline_directive() -> None:
+    source = "import plugin_b  # yngfmt: keep-imports\n"
+
+    assert format_code(source) == "import plugin_b # yngfmt: keep-imports\n"
+
+
 def test_is_idempotent() -> None:
     source = "data={'name':'test'}\nvalue=data[\"name\"]\n"
     formatted_source = format_code(source)
