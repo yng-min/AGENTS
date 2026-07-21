@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "yngmin-python-formatter"
-version = "0.2.0"
+version = "0.3.0"
 description = "Python formatter and linter for yngmin's Python Style Guide"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -28,3 +28,8 @@ packages = ["src/yngfmt"]
 [tool.pytest.ini_options]
 pythonpath = ["src"]
 testpaths = ["tests"]
+
+[tool.yngfmt.imports]
+first-party = ["yngfmt"]
+language-segment = "language"
+config-segment = "config"
