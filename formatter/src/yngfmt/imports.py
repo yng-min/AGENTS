@@ -12,6 +12,12 @@ from pathlib import Path
 from typing import Iterable, Sequence
 
 
+_KEEP_IMPORTS = "# yngfmt: keep-imports"
+_OFF = "# yngfmt: off"
+_ON = "# yngfmt: on"
+_SKIP_FILE = "# yngfmt: skip-file"
+
+
 @dataclass(frozen=True, slots=True)
 class ImportConfig:
     """
@@ -36,6 +42,7 @@ class ImportRecord:
     category: int
     segment: str
     original_index: int
+    is_pinned: bool
 
 
 @dataclass(frozen=True, slots=True)
@@ -181,10 +188,62 @@ def _attached_start(lines: Sequence[str], start_line: int, lower_bound: int) -> 
     return current
 
 
+def _standalone_directive(line: str, directive: str) -> bool:
+    return line.strip() == directive
+
+
+def _protected_lines(source: str) -> set[int]:
+    lines = source.splitlines()
+    protected: set[int] = set()
+    is_off = False
+
+    for index, line in enumerate(lines, start=1):
+        stripped = line.strip()
+
+        if _standalone_directive(line, _OFF):
+            is_off = True
+            protected.add(index)
+            continue
+        if _standalone_directive(line, _ON):
+            protected.add(index)
+            is_off = False
+            continue
+        if is_off:
+            protected.add(index)
+
+        if _KEEP_IMPORTS not in line:
+            continue
+
+        prefix = line.split(_KEEP_IMPORTS, maxsplit=1)[0]
+        if prefix.strip():
+            protected.add(index)
+            continue
+
+        next_index = index + 1
+        if next_index > len(lines) or not lines[next_index - 1].strip():
+            continue
+
+        current = next_index
+        while current <= len(lines) and lines[current - 1].strip():
+            protected.add(current)
+            current += 1
+
+    return protected
+
+
+def _node_is_pinned(
+    node: ast.Import | ast.ImportFrom,
+    protected_lines: set[int]
+) -> bool:
+    end_line = node.end_lineno or node.lineno
+    return any(line in protected_lines for line in range(node.lineno, end_line + 1))
+
+
 def _records(
     source: str,
     nodes: Sequence[ast.Import | ast.ImportFrom],
-    config: ImportConfig
+    config: ImportConfig,
+    protected_lines: set[int]
 ) -> tuple[list[ImportRecord], int, int]:
     lines = source.splitlines(keepends=True)
     records: list[ImportRecord] = []
@@ -204,7 +263,8 @@ def _records(
                 kind=_kind(node),
                 category=_category(node, config),
                 segment=_segment_name(node, config),
-                original_index=index
+                original_index=index,
+                is_pinned=_node_is_pinned(node, protected_lines)
             )
         )
         previous_end = end_line + 1
@@ -214,11 +274,33 @@ def _records(
     return records, first_line, last_line
 
 
+def _sort_with_pinned_records(
+    records: Sequence[ImportRecord],
+    config: ImportConfig
+) -> list[ImportRecord]:
+    result: list[ImportRecord] = []
+    pending: list[ImportRecord] = []
+
+    for record in records:
+        if not record.is_pinned:
+            pending.append(record)
+            continue
+
+        result.extend(sorted(pending, key=lambda item: _sort_key(item, config)))
+        pending.clear()
+        result.append(record)
+
+    result.extend(sorted(pending, key=lambda item: _sort_key(item, config)))
+    return result
+
+
 def _separator(
     previous: ImportRecord,
     current: ImportRecord,
     config: ImportConfig
 ) -> str:
+    if previous.is_pinned or current.is_pinned:
+        return "\n"
     if previous.category != current.category:
         return "\n\n"
     if current.category != 3 or previous.segment == current.segment:
@@ -243,7 +325,7 @@ def sort_imports(source: str, config: ImportConfig = ImportConfig()) -> str:
     """
     Sort the leading top-level import section according to the style guide.
     """
-    if "# yngfmt: keep-imports" in source or "# yngfmt: off" in source:
+    if any(line.strip() == _SKIP_FILE for line in source.splitlines()):
         return source
 
     tree = ast.parse(source)
@@ -251,8 +333,14 @@ def sort_imports(source: str, config: ImportConfig = ImportConfig()) -> str:
     if not nodes:
         return source
 
-    records, first_line, last_line = _records(source, nodes, config)
-    sorted_records = sorted(records, key=lambda record: _sort_key(record, config))
+    protected_lines = _protected_lines(source)
+    records, first_line, last_line = _records(
+        source=source,
+        nodes=nodes,
+        config=config,
+        protected_lines=protected_lines
+    )
+    sorted_records = _sort_with_pinned_records(records=records, config=config)
     rendered = _render(sorted_records, config)
 
     lines = source.splitlines(keepends=True)
