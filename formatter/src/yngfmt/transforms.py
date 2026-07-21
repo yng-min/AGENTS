@@ -98,7 +98,6 @@ class YngminStyleTransformer(cst.CSTTransformer):
             updated_string = string_node.with_changes(value=_single_quoted_string(value))
             updated_index = slice_value.with_changes(value=updated_string)
             updated_slices.append(slice_element.with_changes(slice=updated_index))
-
         return updated_node.with_changes(slice=tuple(updated_slices))
 
     def leave_Dict(
@@ -128,6 +127,16 @@ class YngminStyleTransformer(cst.CSTTransformer):
                 whitespace_before=cst.SimpleWhitespace(" ")
             ),
         )
+
+    def leave_TrailingWhitespace(
+        self,
+        original_node: cst.TrailingWhitespace,
+        updated_node: cst.TrailingWhitespace,
+    ) -> cst.TrailingWhitespace:
+        if updated_node.comment is None:
+            return updated_node
+
+        return updated_node.with_changes(whitespace=cst.SimpleWhitespace(" "))
 
 
 def apply_custom_transforms(source: str) -> str:
