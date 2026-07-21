@@ -45,7 +45,7 @@ def _double_quoted_string(value: str) -> str:
 
 def _plain_string_value(node: cst.SimpleString) -> str | None:
     prefix = node.prefix.lower()
-    if prefix:
+    if prefix or node.quote in {'"""', "'''"}:
         return None
 
     evaluated_value = node.evaluated_value
