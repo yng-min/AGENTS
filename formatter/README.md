@@ -48,6 +48,7 @@ yngfmt --line-length 100 src
 - dictionary key access의 작은따옴표
 - 비어 있지 않은 single-line dictionary literal 내부 양쪽 1 space
 - 빈 dictionary literal의 `{}` 형태
+- 코드와 같은 줄에 작성하는 inline comment 앞 1 space
 - Black이 안정적으로 처리하는 줄바꿈, trailing comma, blank line
 - Standard library → third-party → first-party import 그룹 순서
 - 각 import 그룹 내부에서 `from` 문을 `import` 문보다 위에 배치
@@ -62,6 +63,17 @@ message = "hello"
 user = { "name": "test", "enabled": True }
 name = user['name']
 empty_data = {}
+value = 1 # explanation
+```
+
+Inline comment spacing은 일반 comment뿐 아니라 `# type: ignore`, `# noqa`, formatter directive에도 동일하게 적용합니다. standalone comment에는 적용하지 않습니다.
+
+```python
+result = process(data=data) # type: ignore[arg-type]
+import plugin_b # yngfmt: keep-imports
+
+# standalone comment
+value = 1
 ```
 
 Import 정렬 예시:
@@ -94,7 +106,9 @@ multiline import와 inline comment는 원문과 함께 이동합니다. 다음 �
 - `if`, `try`, `TYPE_CHECKING` 등 조건부 block 내부 import
 - 처음 나타나는 연속 top-level import section 이후의 지연 import
 
-import 순서 자체가 runtime 동작에 영향을 주는 파일은 다음 directive로 제외할 수 있습니다.
+### Import 정렬 제외 directive
+
+단독 `# yngfmt: keep-imports`는 blank line 없이 바로 이어지는 import 블록의 순서를 유지합니다.
 
 ```python
 # yngfmt: keep-imports
@@ -102,7 +116,38 @@ import plugin_b
 import plugin_a
 ```
 
-파일 전체 formatter 제외 구간에 `# yngfmt: off`가 존재하는 경우에도 import 자동 정렬을 수행하지 않습니다.
+directive와 import 사이에 blank line이 있으면 효과가 종료됩니다.
+
+```python
+# yngfmt: keep-imports
+
+import plugin_b
+import plugin_a
+```
+
+import 문 뒤에 inline으로 작성하면 해당 import 한 줄만 현재 위치에 고정됩니다. 고정된 줄의 앞뒤 import는 각각 독립적으로 정렬합니다.
+
+```python
+import requests
+import plugin_b # yngfmt: keep-imports
+import json
+from pathlib import Path
+```
+
+`# yngfmt: off`와 `# yngfmt: on` 사이의 import는 원래 순서를 유지합니다.
+
+```python
+# yngfmt: off
+import plugin_b
+import plugin_a
+# yngfmt: on
+```
+
+파일 전체의 import 정렬을 제외하려면 `# yngfmt: skip-file`을 단독 줄로 사용합니다.
+
+```python
+# yngfmt: skip-file
+```
 
 ## Linter
 
