@@ -18,7 +18,7 @@ python -m pip install -e ".[dev]"
 
 ```toml
 [tool.yngfmt.imports]
-first-party = ["helpmate"]
+first-party = ["project"]
 language-segment = "language"
 config-segment = "config"
 ```
@@ -72,16 +72,16 @@ import json
 
 from pydantic import BaseModel
 
-from helpmate.language.i18n import translate
+from project.language.i18n import translate
 
-from helpmate.application.service import Service
+from project.application.service import Service
 
-from helpmate.domain.article import Article
+from project.domain.article import Article
 
-from helpmate.infrastructure.database import Database
+from project.infrastructure.database import Database
 
 
-from helpmate.config.runtime import runtime_config
+from project.config.runtime import runtime_config
 
 
 class Application:
