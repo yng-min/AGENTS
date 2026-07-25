@@ -91,12 +91,9 @@ def get_article(article_id: int) -> Article:
 | 항목 | 규칙 |
 | --- | --- |
 | Top-level class spacing | 최상위 class 선언 전 **2 blank lines** 유지 |
-| Class method spacing | class 내부 method 선언 전 **1 blank line** 유지
-단, class docstring 바로 다음 method에는 **blank line을 넣지 않음** |
+| Class method spacing | class 내부 method 선언 전 **1 blank line** 유지<br><br>단, class docstring 바로 다음 method에는 **blank line을 넣지 않음** |
 | Adjacent function / method definitions | 인접한 function 또는 method 선언 사이에는 **1 blank line** 유지 |
-| Function body spacing | function 또는 method 선언 직후에는 **blank line을 넣지 않는다**
-docstring 아래에도 **blank line을 넣지 않는다**
-body 내부의 blank line은 logical stage를 구분할 때만 사용한다 |
+| Function body spacing | function 또는 method 선언 직후에는 **blank line을 넣지 않는다**<br><br>docstring 아래에도 **blank line을 넣지 않는다**<br><br>body 내부의 blank line은 logical stage를 구분할 때만 사용한다 |
 | Control flow block spacing | `if`, `for`, `while`, `try` 블록 이후 다음 statement가 별도의 logical block으로 넘어가는 경우에만 **1 blank line** 유지 |
 
 ### 3.1 Function Body Spacing
