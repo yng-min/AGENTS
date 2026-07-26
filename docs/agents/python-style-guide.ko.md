@@ -90,13 +90,36 @@ def get_article(article_id: int) -> Article:
 
 | 항목 | 규칙 |
 | --- | --- |
-| Top-level class spacing | 최상위 class 선언 전 **2 blank lines** 유지 |
-| Class method spacing | class 내부 method 선언 전 **1 blank line** 유지<br><br>단, class docstring 바로 다음 method에는 **blank line을 넣지 않음** |
-| Adjacent function / method definitions | 인접한 function 또는 method 선언 사이에는 **1 blank line** 유지 |
+| Top-level definition spacing | 최상위 class와 function 선언 전에는 **2 blank lines**를 유지 |
+| Class method spacing | class 내부의 인접한 method 선언 사이에는 **1 blank line**을 유지한다.<br><br>단, class docstring 바로 다음 첫 method에는 **blank line을 넣지 않는다** |
+| Adjacent method definitions | class 내부의 인접한 method 선언 사이에는 **1 blank line** 유지 |
 | Function body spacing | function 또는 method 선언 직후에는 **blank line을 넣지 않는다**<br><br>docstring 아래에도 **blank line을 넣지 않는다**<br><br>body 내부의 blank line은 logical stage를 구분할 때만 사용한다 |
 | Control flow block spacing | `if`, `for`, `while`, `try` 블록 이후 다음 statement가 별도의 logical block으로 넘어가는 경우에만 **1 blank line** 유지 |
 
-### 3.1 Function Body Spacing
+### 3.1 Top-level Definition Spacing
+
+최상위 class와 function 선언 전에는 2 blank lines를 유지한다.
+
+파일의 첫 번째 최상위 선언에는 선행 blank line을 요구하지 않는다.
+
+decorator가 있는 경우 decorator를 선언의 시작으로 취급한다.
+
+예시:
+
+```python
+def load_config() -> Config:
+    ...
+
+
+def run() -> None:
+    ...
+
+
+class Application:
+    ...
+```
+
+### 3.2 Function Body Spacing
 
 function 또는 method body는 선언문 또는 docstring 바로 다음에서 시작한다.
 
@@ -121,7 +144,7 @@ def process(data: Data) -> Result:
     return build_result(validated_data=validated_data)
 ```
 
-### 3.2 Logical Block Spacing
+### 3.3 Logical Block Spacing
 
 Blank line은 단순히 코드를 보기 좋게 꾸미기 위한 용도가 아니라, 처리 단계의 경계를 표현하기 위해 사용한다.
 
@@ -150,7 +173,7 @@ Blank line은 단순히 코드를 보기 좋게 꾸미기 위한 용도가 아�
 > 디버깅, 리뷰, 장기 유지보수 과정에서 컨텍스트를 따라가는 비용을 줄인다. 목표는 의미 있는 처리 단계를 드러내되, 단순한 직선 흐름의 함수를 불필요하게 장황하게 만들지 않는 것이다.
 > 
 
-### 3.3 Return Spacing
+### 3.4 Return Spacing
 
 `return`은 새로운 logical block의 시작이 아니라 현재 logical block의 종료로 취급한다.
 
@@ -186,7 +209,7 @@ if article is None:
 return article
 ```
 
-### 3.4 반복되는 독립 작업
+### 3.5 반복되는 독립 작업
 
 반복되는 작업이 각각 독립적인 의미를 가진다면 작업 단위마다 1 blank line으로 구분한다.
 
@@ -216,7 +239,7 @@ config.add_argument(...)
 config.add_argument(...)
 ```
 
-### 3.5 짧은 Wrapper Method
+### 3.6 짧은 Wrapper Method
 
 단순한 wrapper method는 최대한 압축된 형태를 유지한다.
 
@@ -245,7 +268,7 @@ async def execute(self, request: Request) -> Response:
     return await self.handler.execute(request=request)
 ```
 
-### 3.6 Dictionary Literal Spacing
+### 3.7 Dictionary Literal Spacing
 
 비어 있지 않은 single-line dictionary literal은 여는 중괄호(`{`)와 첫 번째 항목 사이, 마지막 항목과 닫는 중괄호(`}`) 사이에 각각 **1 space**를 둔다.
 
@@ -277,7 +300,7 @@ user = {
 }
 ```
 
-### 3.7 줄바꿈
+### 3.8 줄바꿈
 
 Dictionary literal, list literal, function argument, chained expression은 여러 줄로 펼쳤을 때 가독성이 좋아진다면 multi-line 형태로 작성할 수 있다.
 
