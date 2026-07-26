@@ -15,6 +15,7 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
+    "pyright>=1.1.393",
     "pytest>=8.0",
 ]
 
@@ -24,6 +25,12 @@ ynglint = "yngfmt.lint_cli:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/yngfmt"]
+
+[tool.pyright]
+include = ["src", "tests"]
+pythonVersion = "3.11"
+typeCheckingMode = "standard"
+reportMissingTypeStubs = "none"
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]
