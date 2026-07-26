@@ -42,4 +42,4 @@ def main() -> int:
 
     for diagnostic in diagnostics:
         print(diagnostic.render())
-    return 1 if diagnostics else 0
+    return 1 if any(item.severity == "error" for item in diagnostics) else 0
