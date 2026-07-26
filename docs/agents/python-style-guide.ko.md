@@ -92,7 +92,6 @@ def get_article(article_id: int) -> Article:
 | --- | --- |
 | Top-level definition spacing | 최상위 class와 function 선언 전에는 **2 blank lines** 유지 |
 | Class method spacing | class 내부의 인접한 method 선언 사이에는 **1 blank line** 유지<br><br>단, class docstring 바로 다음 첫 method에는 **blank line을 넣지 않음** |
-| Adjacent method definitions | class 내부의 인접한 method 선언 사이에는 **1 blank line** 유지 |
 | Function body spacing | function 또는 method 선언 직후에는 **blank line을 넣지 않음**<br><br>docstring 아래에도 **blank line을 넣지 않음**<br><br>body 내부의 blank line은 logical stage를 구분할 때만 사용 |
 | Control flow block spacing | `if`, `for`, `while`, `try` 블록 이후 다음 statement가 별도의 logical block으로 넘어가는 경우에만 **1 blank line** 유지 |
 
@@ -296,7 +295,7 @@ empty_data = {}
 ```python
 user = {
     "name": "test",
-    "enabled": True
+    "enabled": True,
 }
 ```
 
@@ -459,9 +458,9 @@ prefix에는 해당 설정이 무엇에 대한 설정인지 드러나야 한다.
 예시:
 
 ```python
-path_config
-runtime_config
-color_map_config
+path_config: PathConfig
+runtime_config = RuntimeConfig()
+color_map_config: ColorMapConfig = load_color_map_config()
 ```
 
 설정을 읽거나 해석하거나 생성하거나 제공하는 역할의 객체에는 이 규칙을 적용하지 않는다.
@@ -594,7 +593,7 @@ user = service.create_user(
 )
 ```
 
-다음과 같은 경우에는 인자가 하나더라도 multi-line call을 허용한다.
+다음과 같은 경우에는 인자가 하나뿐이더라도 multi-line call을 허용한다.
 
 - nested call
 - dictionary, list, set, tuple literal
@@ -689,12 +688,15 @@ from dataclasses import dataclass
 from enum import StrEnum
 from typing import Generic, TypeVar
 
+
 T = TypeVar("T")
+
 
 class ResultCode(StrEnum):
     SUCCESS = "SUCCESS"
     IGNORED = "IGNORED"
     FAILED = "FAILED"
+
 
 @dataclass(slots=True)
 class Result(Generic[T]):
@@ -1030,6 +1032,7 @@ from project.logging.logging import Logging
 from project.config.default_config import default_config
 from project.config.runtime_config import runtime_config
 
+
 class ArticleService:
     """
     Manage article processing and rendering.
@@ -1092,10 +1095,10 @@ logical stage 구분, naming intent, 책임 분리처럼 사람의 설계 판단
 | Import | dynamic project layer segment grouping | custom checker | Error | possible | Medium |
 | Naming | class / function / method naming format | linter | Error | possible | Low |
 | Naming | configuration object `_config` suffix | code review | Review | possible | Medium |
-| Naming | boolean literal named argument | code review | Review | possible | Low |
-| Naming | boolean prefix recommendation | code review | Review | difficult | High |
+| Naming | named argument for boolean literals | code review | Review | possible | Low |
+| Naming | boolean naming recommendation | code review | Review | difficult | High |
 | Naming | semantic variable name | code review | Review | difficult | High |
-| Result Object | result object field consistency | type checker / linter | Error | possible | Medium |
+| Result Object | result object field consistency | type checker / custom checker | Error | implemented | Medium |
 | Exception | result vs exception boundary | code review | Review | partially possible | High |
 | Architecture | responsibility and layer boundary | architecture review | Review | difficult | High |
 
@@ -1159,7 +1162,7 @@ def process(data: Data) -> Result:
     if response_data['error']:
         raise ClientError(response_data['message'])
 
-    result = build_result(response_data)
+    result = build_result(response_data=response_data)
     return result
 ```
 
@@ -1223,7 +1226,7 @@ def get_result(data: Data) -> Result:
 
 ```python
 def get_article(article_id: int) -> Article:
-    article = repository.find_by_id(article_id)
+    article = repository.find_by_id(article_id=article_id)
     if article is None:
         raise ArticleNotFoundError("Article not found")
 
@@ -1463,12 +1466,15 @@ from dataclasses import dataclass
 from enum import StrEnum
 from typing import Generic, TypeVar
 
+
 T = TypeVar("T")
+
 
 class ResultCode(StrEnum):
     SUCCESS = "SUCCESS"
     IGNORED = "IGNORED"
     FAILED = "FAILED"
+
 
 @dataclass(slots=True)
 class Result(Generic[T]):
