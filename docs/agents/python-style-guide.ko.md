@@ -90,7 +90,7 @@ def get_article(article_id: int) -> Article:
 
 | 항목 | 규칙 |
 | --- | --- |
-| Top-level definition spacing | 최상위 class와 function 선언 전에는 **2 blank lines**를 유지 |
+| Top-level definition spacing | 최상위 class와 function 선언 전에는 **2 blank lines** 유지 |
 | Class method spacing | class 내부의 인접한 method 선언 사이에는 **1 blank line**을 유지한다.<br><br>단, class docstring 바로 다음 첫 method에는 **blank line을 넣지 않는다** |
 | Adjacent method definitions | class 내부의 인접한 method 선언 사이에는 **1 blank line** 유지 |
 | Function body spacing | function 또는 method 선언 직후에는 **blank line을 넣지 않는다**<br><br>docstring 아래에도 **blank line을 넣지 않는다**<br><br>body 내부의 blank line은 logical stage를 구분할 때만 사용한다 |
