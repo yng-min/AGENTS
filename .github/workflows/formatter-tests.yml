@@ -33,9 +33,15 @@ jobs:
         run: pytest | tee pytest-output.txt
         working-directory: formatter
 
-      - name: Upload pytest output
+      - name: Run Pyright
+        run: pyright | tee pyright-output.txt
+        working-directory: formatter
+
+      - name: Upload validation output
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: pytest-output
-          path: formatter/pytest-output.txt
+          name: formatter-validation-output
+          path: |
+            formatter/pytest-output.txt
+            formatter/pyright-output.txt
