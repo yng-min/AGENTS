@@ -40,3 +40,10 @@ testpaths = ["tests"]
 first-party = ["yngfmt"]
 language-segment = "language"
 config-segment = "config"
+
+[tool.yngfmt.result-object]
+class-names = ["Result"]
+typed-dict-names = ["ResultDict"]
+required-fields = ["error", "code", "message", "data"]
+marker-fields = ["error", "code"]
+aliases = ["success", "msg", "payload"]
