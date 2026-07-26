@@ -4,15 +4,22 @@ Tests for style guide linter rules.
 
 from pathlib import Path
 
-from yngfmt.linter import lint_code
+from yngfmt.linter import ResultConfig, lint_code
 
 
-def _diagnostics(source: str):
-    return lint_code(source=source, path=Path("test.py"))
+def _diagnostics(source: str, result_config: ResultConfig = ResultConfig()):
+    return lint_code(
+        source=source,
+        path=Path("test.py"),
+        result_config=result_config
+    )
 
 
-def _codes(source: str) -> list[str]:
-    return [diagnostic.code for diagnostic in _diagnostics(source)]
+def _codes(source: str, result_config: ResultConfig = ResultConfig()) -> list[str]:
+    return [
+        diagnostic.code
+        for diagnostic in _diagnostics(source, result_config=result_config)
+    ]
 
 
 def test_accepts_core_style_rules() -> None:
@@ -29,9 +36,9 @@ class ExampleService:
     Example service.
     """
     def get_value(self, data: dict[str, str]) -> str:
-        is_enabled: bool = True
+        enabled: bool = True
         value = data['name']
-        return value if is_enabled else ""
+        return value if enabled else ""
 '''.lstrip()
 
     assert _codes(source) == []
@@ -47,21 +54,6 @@ def test_reports_naming_and_type_annotation_rules() -> None:
     source = "class bad_name:\n    def GetValue(self, value):\n        return value\n"
 
     assert _codes(source) == ["YNG201", "YNG202", "YNG302", "YNG301"]
-
-
-def test_boolean_prefix_is_advisory_and_supports_optional_forms() -> None:
-    diagnostics = _diagnostics(
-        "from typing import Optional\n\n\n"
-        "def execute(enabled: bool, ready: Optional[bool]) -> None:\n"
-        "    self.active: bool | None = None\n"
-    )
-
-    assert [diagnostic.code for diagnostic in diagnostics] == [
-        "YNG203",
-        "YNG203",
-        "YNG203"
-    ]
-    assert all(diagnostic.severity == "warning" for diagnostic in diagnostics)
 
 
 def test_reports_docstring_layout_rules() -> None:
@@ -135,16 +127,90 @@ def test_allows_return_spacing_after_validation() -> None:
     assert _codes(source) == []
 
 
-def test_reports_result_object_field_consistency() -> None:
-    missing = '''def execute() -> dict[str, object]:
+def test_result_detection_uses_marker_fields() -> None:
+    payload = '''def execute() -> dict[str, object]:
+    return {"message": "ok", "data": None}
+'''
+    result = '''def execute() -> dict[str, object]:
     return {"error": False, "message": "ok"}
 '''
-    aliases = '''def execute() -> dict[str, object]:
+
+    assert _codes(payload) == []
+    assert _codes(result) == ["YNG601"]
+
+
+def test_reports_result_aliases() -> None:
+    source = '''def execute() -> dict[str, object]:
     return {"success": True, "msg": "ok", "payload": None}
 '''
 
-    assert _codes(missing) == ["YNG601"]
-    assert _codes(aliases) == ["YNG602"]
+    assert _codes(source) == ["YNG602"]
+
+
+def test_tracks_local_result_dictionary() -> None:
+    source = '''def execute() -> dict[str, object]:
+    result = {"error": False, "code": "SUCCESS", "message": "ok"}
+    return result
+'''
+
+    assert _codes(source) == ["YNG601"]
+
+
+def test_reports_result_branch_field_mismatch() -> None:
+    config = ResultConfig(required_fields=("error", "code"))
+    source = '''def execute(ignored: bool) -> dict[str, object]:
+    if ignored:
+        return {"error": False, "code": "IGNORED"}
+    return {"error": False, "code": "SUCCESS", "message": "ok"}
+'''
+
+    assert _codes(source, result_config=config) == ["YNG603"]
+
+
+def test_validates_configured_typed_dict_schema() -> None:
+    source = '''from typing import TypedDict
+
+
+class OperationResult(TypedDict):
+    error: bool
+    code: str
+    message: str
+'''
+    config = ResultConfig(typed_dict_names=("OperationResult",))
+
+    assert _codes(source, result_config=config) == ["YNG601"]
+
+
+def test_return_annotation_forces_result_dictionary_validation() -> None:
+    source = '''from typing import TypedDict
+
+
+class OperationResult(TypedDict):
+    error: bool
+    code: str
+    message: str
+    data: object | None
+
+
+def execute() -> OperationResult:
+    return {"message": "ok", "data": None}
+'''
+    config = ResultConfig(typed_dict_names=("OperationResult",))
+
+    assert _codes(source, result_config=config) == ["YNG601"]
+
+
+def test_supports_custom_result_fields() -> None:
+    source = '''def execute() -> dict[str, object]:
+    return {"ok": True, "value": None}
+'''
+    config = ResultConfig(
+        required_fields=("ok", "value"),
+        marker_fields=("ok",),
+        aliases=()
+    )
+
+    assert _codes(source, result_config=config) == []
 
 
 def test_reports_import_order_within_group() -> None:
