@@ -942,7 +942,7 @@ logical stage 구분, naming intent, 책임 분리처럼 사람의 설계 판단
 | Import | reserved segment order | custom checker | Error | possible | Low |
 | Import | dynamic project layer segment grouping | custom checker | Error | possible | Medium |
 | Naming | class / function / method naming format | linter | Error | possible | Low |
-| Naming | boolean prefix | linter | Review | possible | Medium |
+| Naming | boolean prefix recommendation | advisory linter | Review | possible | Medium |
 | Naming | semantic variable name | code review | Review | difficult | High |
 | Result Object | result object field consistency | type checker / linter | Error | possible | Medium |
 | Exception | result vs exception boundary | code review | Review | partially possible | High |
