@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "yng-agents-tools"
+version = "0.2.0"
+description = "Repository impact analysis and documentation synchronization tools"
+requires-python = ">=3.11"
+readme = "README.md"
+license = { text = "MIT" }
+authors = [
+    { name = "yng-min" }
+]
+dependencies = []
+
+[project.optional-dependencies]
+imports = ["grimp>=3,<4"]
+types = ["pyright>=1.1"]
+patterns = ["semgrep>=1"]
+full = [
+    "grimp>=3,<4",
+    "pyright>=1.1",
+    "semgrep>=1"
+]
+
+[project.scripts]
+agents-tools = "agents_tools.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
