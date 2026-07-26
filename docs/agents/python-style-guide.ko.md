@@ -1,4 +1,4 @@
-# yngmin’s Python Style Guide (Korean) - v4 (260720)
+# yngmin’s Python Style Guide (Korean) - v4 (260726)
 
 > 코드 스타일, 설계 원칙 및 코딩 컨벤션
 > 
@@ -302,18 +302,52 @@ user = {
 
 ### 3.8 줄바꿈
 
-Dictionary literal, list literal, function argument, chained expression은 여러 줄로 펼쳤을 때 가독성이 좋아진다면 multi-line 형태로 작성할 수 있다.
+Dictionary literal, list literal, function argument, chained expression은 여러 줄로 펼쳤을 때 의미 구조와 처리 단계를 더 명확하게 드러낼 수 있다면 multi-line 형태로 작성할 수 있다.
 
-argument가 1개뿐이거나 표현식이 짧은 경우에는 named argument를 사용하더라도 single-line 형태를 기본으로 한다.
+줄바꿈 여부는 고정된 line length가 아니라 다음 기준을 바탕으로 판단한다.
+
+- 표현식이 자체적인 내부 구조를 가지는가
+- 여러 값이나 처리 단계의 경계를 구분할 필요가 있는가
+- 중첩 호출, collection literal, comprehension, 조건식, 연산식 등이 포함되어 있는가
+- 주석이나 설명을 보존하기 위해 별도의 줄이 필요한가
 
 느슨한 기준으로, **dictionary literal의 key가 5개 이상이면 multi-line 형태를 우선 고려한다.** 단, 이는 **강제 규칙이 아니다.**
 
-줄바꿈은 고정된 line length보다 **의미 단위의 가독성**을 우선한다.
+인자가 하나인 function call은 해당 인자가 단순한 값이나 참조인 경우 single-line 형태를 기본으로 한다.
+
+```python
+result = service.process(article=article)
+repository.save(data)
+```
+
+유일한 인자가 중첩 호출, collection literal, comprehension, 조건식, 연산식처럼 자체적인 구조를 가진다면 multi-line 형태를 사용할 수 있다.
+
+```python
+result = service.process(
+    article=create_article(
+        metadata=metadata,
+        content=content,
+    ),
+)
+```
+
+```python
+service.process(
+    options={
+        "enabled": True,
+        "timeout": 10,
+    },
+)
+```
+
+줄바꿈 여부를 판단할 때 line length는 독립적인 기준으로 사용하지 않는다.
+
+한 줄의 길이가 짧거나 길다는 사실만으로 표현식을 접거나 펼치지 않는다.
 
 > **설계 의도**
 > 
 
-> 가독성은 문자 수보다 문맥에 따라 달라진다. 줄바꿈은 고정된 최대 길이를 맞추기 위한 것이 아니라, 논리 구조를 드러내고 복잡한 표현식을 더 쉽게 읽을 수 있도록 하기 위해 사용한다.
+> 가독성은 문자 수보다 문맥과 표현식의 구조에 따라 달라진다. 줄바꿈은 고정된 최대 길이를 맞추기 위한 것이 아니라, 논리 구조와 처리 단계의 경계를 드러내고 복잡한 표현식을 더 쉽게 읽을 수 있도록 하기 위해 사용한다.
 > 
 
 ---
@@ -418,7 +452,7 @@ article_metadata: dict[str, Any] = article.metadata
 
 ### 4.7 Config 네이밍
 
-설정 객체는 `_config` suffix를 사용한다.
+설정값을 구조화하여 보관하는 설정 객체는 `_config` suffix를 사용한다.
 
 prefix에는 해당 설정이 무엇에 대한 설정인지 드러나야 한다.
 
@@ -430,11 +464,58 @@ runtime_config
 color_map_config
 ```
 
+설정을 읽거나 해석하거나 생성하거나 제공하는 역할의 객체에는 이 규칙을 적용하지 않는다.
+
+```python
+config_loader = ConfigLoader()
+config_parser = ConfigParser()
+config_builder = ConfigBuilder()
+config_provider = ConfigProvider()
+```
+
+설정 데이터 객체와 설정을 처리하는 객체는 이름만으로 구분할 수 있어야 한다.
+
+> **설계 의도**
+> 
+
+> `_config` suffix는 설정값을 보관하는 데이터 객체를 명확하게 식별하기 위해 사용한다.
+> 
+
+> 설정을 처리하는 loader, parser, builder, provider 등의 역할까지 `_config`로 통일하면 객체의 실제 책임이 흐려질 수 있으므로 구분한다.
+> 
+
 ### 4.8 Named Argument Preference
 
 Function 또는 method 호출 시에는 positional argument보다 named argument 사용을 기본으로 한다.
 
 특히 동일한 타입의 인자가 여러 개 존재하거나, boolean 값, 설정값, 옵션값이 포함된 경우에는 named argument 사용을 권장한다.
+
+`True`와 `False` 같은 boolean literal은 값 자체만으로 의미를 설명하지 못하므로 원칙적으로 named argument로 전달한다.
+
+```python
+create_user(
+    user_id=user_id,
+    is_admin=True,
+)
+
+request.execute(should_retry=False)
+```
+
+다음과 같이 boolean literal을 positional argument로 전달하는 것은 권장하지 않는다.
+
+```python
+create_user(user_id, True)
+request.execute(False)
+```
+
+변수나 expression을 통해 전달되는 boolean 값은 호출부의 문맥과 API 관례를 함께 고려한다.
+
+```python
+create_user(
+    user_id=user_id,
+    is_admin=is_admin,
+)
+```
 
 다만 Python 표준 라이브러리, 내장 함수, 외부 라이브러리 등에서 positional argument 사용이 일반적인 경우에는 해당 라이브러리의 관례를 따른다.
 
@@ -459,13 +540,51 @@ user = service.create_user(
 
 ### 4.8.1 Function Call Formatting
 
-인자가 하나이고 한 줄에 충분히 표현 가능한 경우에는 single-line call을 유지한다.
+Function call의 single-line 또는 multi-line 형태는 line length가 아니라 인자의 개수와 expression의 구조를 기준으로 결정한다.
+
+인자가 하나이고 해당 인자가 단순한 값 또는 참조인 경우에는 single-line call을 유지한다.
 
 ```python
 result: Result[Article] = service.process(article=article)
+repository.save(data)
+set_enabled(value=True)
 ```
 
-인자가 여러 개이거나 한 줄에서 가독성이 떨어지는 경우에는 multi-line call을 사용한다.
+단순한 인자 하나만을 별도의 줄로 분리하는 것은 권장하지 않는다.
+
+```python
+result: Result[Article] = service.process(
+    article=article,
+)
+```
+
+유일한 인자가 자체적인 expression 구조를 가지거나, 호출과 인자 내부의 처리 단계를 구분할 필요가 있는 경우에는 multi-line call을 사용할 수 있다.
+
+```python
+result: Result[Article] = service.process(
+    article=create_article(
+        metadata=metadata,
+        content=content,
+    ),
+)
+```
+
+```python
+service.process(
+    options={
+        "enabled": True,
+        "timeout": 10,
+    },
+)
+```
+
+```python
+service.process(
+    value=primary_value if condition else fallback_value,
+)
+```
+
+인자가 여러 개인 경우에도 각 인자의 역할과 호출 구조를 명확하게 드러내는 형태를 선택한다.
 
 ```python
 user = service.create_user(
@@ -475,13 +594,19 @@ user = service.create_user(
 )
 ```
 
-인자가 하나뿐이고 한 줄에 충분히 표현 가능한데도 multi-line call로 펼치는 것은 권장하지 않는다.
+다음과 같은 경우에는 인자가 하나더라도 multi-line call을 허용한다.
 
-```python
-result: Result[Article] = service.process(
-    article=article,
-)
-```
+- nested call
+- dictionary, list, set, tuple literal
+- comprehension 또는 generator expression
+- conditional expression
+- binary 또는 boolean expression
+- lambda expression
+- multi-line string
+- argument에 설명 주석이 존재하는 경우
+- `*args` 또는 `**kwargs`를 사용하는 경우
+
+이 규칙은 line length를 기준으로 판단하지 않는다.
 
 > **운영 기준**
 > 
@@ -961,10 +1086,13 @@ logical stage 구분, naming intent, 책임 분리처럼 사람의 설계 판단
 | Blank Line | return spacing | custom checker | Review | partially possible | Medium |
 | Blank Line | short wrapper method spacing | custom checker | Review | partially possible | Medium |
 | Line Breaking | semantic line breaking | code review | Review | difficult | High |
+| Line Breaking | simple single-argument call formatting | code review | Review | partially possible | Medium |
 | Import | standard / third-party / first-party / group order | import sorter | Error | possible | Low |
 | Import | reserved segment order | custom checker | Error | possible | Low |
 | Import | dynamic project layer segment grouping | custom checker | Error | possible | Medium |
 | Naming | class / function / method naming format | linter | Error | possible | Low |
+| Naming | configuration object `_config` suffix | code review | Review | possible | Medium |
+| Naming | boolean literal named argument | code review | Review | possible | Low |
 | Naming | boolean prefix recommendation | code review | Review | difficult | High |
 | Naming | semantic variable name | code review | Review | difficult | High |
 | Result Object | result object field consistency | type checker / linter | Error | possible | Medium |
@@ -1230,7 +1358,7 @@ result: Result[Article] = service.process(article=article)
 - 프로젝트의 기본 작성 방식이다.
 - 정적 타입 정보가 명시되어 있다.
 - 호출부에서 named argument를 사용해 값의 의미가 명확하다.
-- 인자가 하나이고 한 줄에 충분히 표현 가능하므로 single-line call을 유지한다.
+- `service.process()`의 유일한 인자가 단순한 참조이므로 single-line call을 유지한다.
 - IDE 지원, 리팩터링 안정성, 코드 탐색성을 높일 수 있다.
 - `Pyright Standard` 기준에서 안정적인 타입 분석이 가능하다.
 
@@ -1277,8 +1405,9 @@ result: Result[Article] = service.process(
 )
 ```
 
-- 인자가 하나뿐이고 한 줄에 충분히 표현 가능하다.
-- multi-line call이 가독성을 높이지 않고 세로 공간만 늘린다.
+- 유일한 인자가 단순한 변수 참조다.
+- multi-line 형태로 분리해도 추가적인 표현식 구조나 처리 단계가 드러나지 않는다.
+- multi-line call이 의미적 정보를 추가하지 않고 세로 공간만 늘린다.
 - 이 경우에는 `service.process(article=article)` 형태를 우선한다.
 
 ---
@@ -1515,6 +1644,8 @@ import origin이 섞여 있어 파일의 의존성을 파악하기 어렵다.
 
 이 섹션은 규칙을 강제하기 위한 것이 아니라, 동일한 문제 상황에서 일관된 의사결정을 내릴 수 있도록 돕기 위해 존재한다.
 
-실제 프로젝트에서는 코드 길이, 책임 범위, 가독성, 팀 컨벤션, 자동화 가능 여부를 함께 고려하여 판단한다.
+실제 프로젝트에서는 책임 범위, 표현식 구조, 처리 단계, 가독성, 팀 컨벤션, 자동화 가능 여부를 함께 고려하여 판단한다.
 
 특히 blank line은 “코드가 여러 줄이다”라는 이유가 아니라, **책임 있는 처리 단계가 분리되었는가**를 기준으로 사용한다.
+
+Function call과 expression의 줄바꿈은 “한 줄에 들어가는가”가 아니라, **구조와 처리 단계를 별도의 줄로 드러낼 필요가 있는가**를 기준으로 판단한다.
