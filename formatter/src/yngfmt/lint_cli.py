@@ -8,7 +8,7 @@ from argparse import ArgumentParser, Namespace
 from pathlib import Path
 
 from yngfmt.imports import find_pyproject, load_import_config
-from yngfmt.linter import iter_python_files, lint_path
+from yngfmt.linter import iter_python_files, lint_path, load_result_config
 
 
 def build_parser() -> ArgumentParser:
@@ -20,7 +20,7 @@ def build_parser() -> ArgumentParser:
     parser.add_argument(
         "--pyproject",
         type=Path,
-        help="Explicit pyproject.toml path for project import settings."
+        help="Explicit pyproject.toml path for project checker settings."
     )
     return parser
 
@@ -34,11 +34,19 @@ def main() -> int:
     pyproject_path = arguments.pyproject
     if pyproject_path is None and files:
         pyproject_path = find_pyproject(files[0])
+
     import_config = load_import_config(pyproject_path)
+    result_config = load_result_config(pyproject_path)
 
     diagnostics = []
     for path in files:
-        diagnostics.extend(lint_path(path=path, import_config=import_config))
+        diagnostics.extend(
+            lint_path(
+                path=path,
+                import_config=import_config,
+                result_config=result_config
+            )
+        )
 
     for diagnostic in diagnostics:
         print(diagnostic.render())
