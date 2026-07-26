@@ -46,9 +46,9 @@
 
 | 항목 | 규칙 |
 | --- | --- |
-| Module docstring | 파일 최상단에 배치하고, 닫는 큰따옴표 3개 아래에 **1 blank line**을 둔다 |
-| Class docstring | class 선언 직후에 배치하며, docstring과 첫 method 사이에는 **blank line을 넣지 않는다** |
-| Function / method docstring | 선언문 직후에 배치하며, docstring과 body 사이에는 **blank line을 넣지 않는다** |
+| Module docstring | 파일 최상단에 배치하고, 닫는 큰따옴표 3개 아래에 **1 blank line** 유지 |
+| Class docstring | class 선언 직후에 배치하며, docstring과 첫 method 사이에는 **blank line을 넣지 않음** |
+| Function / method docstring | 선언문 직후에 배치하며, docstring과 body 사이에는 **blank line을 넣지 않음** |
 
 ### 2.1 Module Docstring
 
@@ -91,9 +91,9 @@ def get_article(article_id: int) -> Article:
 | 항목 | 규칙 |
 | --- | --- |
 | Top-level definition spacing | 최상위 class와 function 선언 전에는 **2 blank lines** 유지 |
-| Class method spacing | class 내부의 인접한 method 선언 사이에는 **1 blank line**을 유지한다.<br><br>단, class docstring 바로 다음 첫 method에는 **blank line을 넣지 않는다** |
+| Class method spacing | class 내부의 인접한 method 선언 사이에는 **1 blank line** 유지<br><br>단, class docstring 바로 다음 첫 method에는 **blank line을 넣지 않음** |
 | Adjacent method definitions | class 내부의 인접한 method 선언 사이에는 **1 blank line** 유지 |
-| Function body spacing | function 또는 method 선언 직후에는 **blank line을 넣지 않는다**<br><br>docstring 아래에도 **blank line을 넣지 않는다**<br><br>body 내부의 blank line은 logical stage를 구분할 때만 사용한다 |
+| Function body spacing | function 또는 method 선언 직후에는 **blank line을 넣지 않음**<br><br>docstring 아래에도 **blank line을 넣지 않음**<br><br>body 내부의 blank line은 logical stage를 구분할 때만 사용 |
 | Control flow block spacing | `if`, `for`, `while`, `try` 블록 이후 다음 statement가 별도의 logical block으로 넘어가는 경우에만 **1 blank line** 유지 |
 
 ### 3.1 Top-level Definition Spacing
