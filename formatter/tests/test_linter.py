@@ -4,21 +4,24 @@ Tests for style guide linter rules.
 
 from pathlib import Path
 
-from yngfmt.linter import ResultConfig, lint_code
+from yngfmt.linter import Diagnostic, ResultConfig, lint_code
 
 
-def _diagnostics(source: str, result_config: ResultConfig = ResultConfig()):
+def _diagnostics(
+    source: str,
+    result_config: ResultConfig = ResultConfig(),
+) -> list[Diagnostic]:
     return lint_code(
         source=source,
         path=Path("test.py"),
-        result_config=result_config
+        result_config=result_config,
     )
 
 
 def _codes(source: str, result_config: ResultConfig = ResultConfig()) -> list[str]:
     return [
         diagnostic.code
-        for diagnostic in _diagnostics(source, result_config=result_config)
+        for diagnostic in _diagnostics(source=source, result_config=result_config)
     ]
 
 
@@ -41,36 +44,78 @@ class ExampleService:
         return value if enabled else ""
 '''.lstrip()
 
-    assert _codes(source) == []
+    assert _codes(source=source) == []
 
 
 def test_reports_quote_and_key_access_rules() -> None:
     source = "message = 'hello'\nvalue = data[\"name\"]\n"
 
-    assert _codes(source) == ["YNG101", "YNG103"]
+    assert _codes(source=source) == ["YNG101", "YNG103"]
+
+
+def test_reports_single_quoted_f_string() -> None:
+    source = "message = f'{value}'\n"
+
+    assert _codes(source=source) == ["YNG101"]
 
 
 def test_reports_naming_and_type_annotation_rules() -> None:
     source = "class bad_name:\n    def GetValue(self, value):\n        return value\n"
 
-    assert _codes(source) == ["YNG201", "YNG202", "YNG302", "YNG301"]
+    assert _codes(source=source) == ["YNG201", "YNG202", "YNG302", "YNG301"]
 
 
 def test_reports_docstring_layout_rules() -> None:
-    source = '''"""Module description."""
+    source = '''"""
+Module description.
+"""
 import json
 
 
 class Service:
-    """Service description."""
+    """
+    Service description.
+    """
 
     def execute(self) -> None:
-        """Execute."""
+        """
+        Execute.
+        """
 
         return None
 '''
 
-    assert _codes(source) == ["YNG104", "YNG105", "YNG106"]
+    assert _codes(source=source) == ["YNG104", "YNG105", "YNG106"]
+
+
+def test_reports_docstring_delimiter_line_rules() -> None:
+    source = '"""Module description."""\n'
+
+    assert _codes(source=source) == ["YNG107", "YNG108"]
+
+
+def test_reports_docstring_opening_delimiter_rule() -> None:
+    source = '"""Module description.\n"""\n'
+
+    assert _codes(source=source) == ["YNG107"]
+
+
+def test_reports_docstring_closing_delimiter_rule() -> None:
+    source = '"""\nModule description."""\n'
+
+    assert _codes(source=source) == ["YNG108"]
+
+
+def test_reports_single_line_dictionary_spacing_rule() -> None:
+    source = 'data = {"name": "test"}\n'
+
+    assert _codes(source=source) == ["YNG109"]
+
+
+def test_accepts_canonical_single_line_dictionary_spacing() -> None:
+    source = 'data = { "name": "test" }\nempty = {}\n'
+
+    assert _codes(source=source) == []
 
 
 def test_reports_definition_spacing_rules() -> None:
@@ -82,7 +127,7 @@ def second() -> None:
     return None
 '''
 
-    assert _codes(source) == ["YNG401", "YNG403"]
+    assert _codes(source=source) == ["YNG401", "YNG403"]
 
 
 def test_reports_class_method_spacing_rule() -> None:
@@ -93,7 +138,7 @@ def test_reports_class_method_spacing_rule() -> None:
         return None
 '''
 
-    assert _codes(source) == ["YNG402"]
+    assert _codes(source=source) == ["YNG402"]
 
 
 def test_reports_short_wrapper_spacing_rule() -> None:
@@ -103,7 +148,7 @@ def test_reports_short_wrapper_spacing_rule() -> None:
     return handler.execute()
 '''
 
-    assert _codes(source) == ["YNG501"]
+    assert _codes(source=source) == ["YNG501"]
 
 
 def test_reports_direct_return_spacing_rule() -> None:
@@ -113,7 +158,7 @@ def test_reports_direct_return_spacing_rule() -> None:
     return result
 '''
 
-    assert _codes(source) == ["YNG502"]
+    assert _codes(source=source) == ["YNG502"]
 
 
 def test_allows_return_spacing_after_validation() -> None:
@@ -124,47 +169,117 @@ def test_allows_return_spacing_after_validation() -> None:
     return article
 '''
 
-    assert _codes(source) == []
+    assert _codes(source=source) == []
+
+
+def test_reports_simple_single_argument_multiline_call() -> None:
+    source = '''def execute(article: object) -> None:
+    service.process(
+        article=article,
+    )
+'''
+
+    assert _codes(source=source) == ["YNG701"]
+
+
+def test_allows_structured_single_argument_multiline_call() -> None:
+    source = '''def execute(metadata: object, content: object) -> None:
+    service.process(
+        article=create_article(
+            metadata=metadata,
+            content=content,
+        ),
+    )
+'''
+
+    assert _codes(source=source) == []
+
+
+def test_allows_comment_to_explain_single_argument_multiline_call() -> None:
+    source = '''def execute(article: object) -> None:
+    service.process(
+        article=article, # preserve explanation
+    )
+'''
+
+    assert _codes(source=source) == []
+
+
+def test_reports_missing_multiline_call_trailing_comma() -> None:
+    source = '''def execute(metadata: object, content: object) -> None:
+    service.process(
+        article=create_article(metadata=metadata, content=content)
+    )
+'''
+
+    assert _codes(source=source) == ["YNG702"]
+
+
+def test_reports_single_line_call_trailing_comma() -> None:
+    source = '''def execute(article: object) -> None:
+    service.process(article=article,)
+'''
+
+    assert _codes(source=source) == ["YNG703"]
+
+
+def test_reports_multiline_zero_argument_call() -> None:
+    source = '''def execute() -> None:
+    service.process(
+    )
+'''
+
+    assert _codes(source=source) == ["YNG704"]
+
+
+def test_allows_multiline_generator_call_without_trailing_comma() -> None:
+    source = '''def execute(items: list[object]) -> None:
+    consume(
+        item for item in items
+    )
+'''
+
+    assert _codes(source=source) == []
 
 
 def test_result_detection_uses_marker_fields() -> None:
     payload = '''def execute() -> dict[str, object]:
-    return {"message": "ok", "data": None}
+    return { "message": "ok", "data": None }
 '''
     result = '''def execute() -> dict[str, object]:
-    return {"error": False, "message": "ok"}
+    return { "error": False, "message": "ok" }
 '''
 
-    assert _codes(payload) == []
-    assert _codes(result) == ["YNG601"]
+    assert _codes(source=payload) == []
+    assert _codes(source=result) == ["YNG601"]
 
 
 def test_reports_result_aliases() -> None:
     source = '''def execute() -> dict[str, object]:
-    return {"success": True, "msg": "ok", "payload": None}
+    return { "success": True, "msg": "ok", "payload": None }
 '''
 
-    assert _codes(source) == ["YNG602"]
+    assert _codes(source=source) == ["YNG602"]
 
 
 def test_tracks_local_result_dictionary() -> None:
     source = '''def execute() -> dict[str, object]:
-    result = {"error": False, "code": "SUCCESS", "message": "ok"}
+    result = { "error": False, "code": "SUCCESS", "message": "ok" }
     return result
 '''
 
-    assert _codes(source) == ["YNG601"]
+    assert _codes(source=source) == ["YNG601"]
 
 
 def test_reports_result_branch_field_mismatch() -> None:
     config = ResultConfig(required_fields=("error", "code"))
     source = '''def execute(ignored: bool) -> dict[str, object]:
     if ignored:
-        return {"error": False, "code": "IGNORED"}
-    return {"error": False, "code": "SUCCESS", "message": "ok"}
+        return { "error": False, "code": "IGNORED" }
+    return { "error": False, "code": "SUCCESS", "message": "ok" }
 '''
 
-    assert _codes(source, result_config=config) == ["YNG603"]
+    assert _codes(source=source, result_config=config) == ["YNG603"]
 
 
 def test_validates_configured_typed_dict_schema() -> None:
@@ -178,7 +293,7 @@ class OperationResult(TypedDict):
 '''
     config = ResultConfig(typed_dict_names=("OperationResult",))
 
-    assert _codes(source, result_config=config) == ["YNG601"]
+    assert _codes(source=source, result_config=config) == ["YNG601"]
 
 
 def test_return_annotation_forces_result_dictionary_validation() -> None:
@@ -193,31 +308,31 @@ class OperationResult(TypedDict):
 
 
 def execute() -> OperationResult:
-    return {"message": "ok", "data": None}
+    return { "message": "ok", "data": None }
 '''
     config = ResultConfig(typed_dict_names=("OperationResult",))
 
-    assert _codes(source, result_config=config) == ["YNG601"]
+    assert _codes(source=source, result_config=config) == ["YNG601"]
 
 
 def test_supports_custom_result_fields() -> None:
     source = '''def execute() -> dict[str, object]:
-    return {"ok": True, "value": None}
+    return { "ok": True, "value": None }
 '''
     config = ResultConfig(
         required_fields=("ok", "value"),
         marker_fields=("ok",),
-        aliases=()
+        aliases=(),
     )
 
-    assert _codes(source, result_config=config) == []
+    assert _codes(source=source, result_config=config) == []
 
 
 def test_reports_import_order_within_group() -> None:
     source = "import json\nfrom pathlib import Path\n"
 
-    assert _codes(source) == ["YNG400"]
+    assert _codes(source=source) == ["YNG400"]
 
 
 def test_reports_syntax_error() -> None:
-    assert _codes("def broken(:\n") == ["YNG000"]
+    assert _codes(source="def broken(:\n") == ["YNG000"]
