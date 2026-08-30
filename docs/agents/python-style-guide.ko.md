@@ -1,4 +1,4 @@
-# yngmin’s Python Style Guide (Korean) - v4 (260720)
+# yngmin’s Python Style Guide (Korean) - v4 (260726)
 
 > 코드 스타일, 설계 원칙 및 코딩 컨벤션
 > 
@@ -46,9 +46,9 @@
 
 | 항목 | 규칙 |
 | --- | --- |
-| Module docstring | 파일 최상단에 배치하고, 닫는 큰따옴표 3개 아래에 **1 blank line**을 둔다 |
-| Class docstring | class 선언 직후에 배치하며, docstring과 첫 method 사이에는 **blank line을 넣지 않는다** |
-| Function / method docstring | 선언문 직후에 배치하며, docstring과 body 사이에는 **blank line을 넣지 않는다** |
+| Module docstring | 파일 최상단에 배치하고, 닫는 큰따옴표 3개 아래에 **1 blank line** 유지 |
+| Class docstring | class 선언 직후에 배치하며, docstring과 첫 method 사이에는 **blank line을 넣지 않음** |
+| Function / method docstring | 선언문 직후에 배치하며, docstring과 body 사이에는 **blank line을 넣지 않음** |
 
 ### 2.1 Module Docstring
 
@@ -90,13 +90,35 @@ def get_article(article_id: int) -> Article:
 
 | 항목 | 규칙 |
 | --- | --- |
-| Top-level class spacing | 최상위 class 선언 전 **2 blank lines** 유지 |
-| Class method spacing | class 내부 method 선언 전 **1 blank line** 유지<br><br>단, class docstring 바로 다음 method에는 **blank line을 넣지 않음** |
-| Adjacent function / method definitions | 인접한 function 또는 method 선언 사이에는 **1 blank line** 유지 |
-| Function body spacing | function 또는 method 선언 직후에는 **blank line을 넣지 않는다**<br><br>docstring 아래에도 **blank line을 넣지 않는다**<br><br>body 내부의 blank line은 logical stage를 구분할 때만 사용한다 |
+| Top-level definition spacing | 최상위 class와 function 선언 전에는 **2 blank lines** 유지 |
+| Class method spacing | class 내부의 인접한 method 선언 사이에는 **1 blank line** 유지<br><br>단, class docstring 바로 다음 첫 method에는 **blank line을 넣지 않음** |
+| Function body spacing | function 또는 method 선언 직후에는 **blank line을 넣지 않음**<br><br>docstring 아래에도 **blank line을 넣지 않음**<br><br>body 내부의 blank line은 logical stage를 구분할 때만 사용 |
 | Control flow block spacing | `if`, `for`, `while`, `try` 블록 이후 다음 statement가 별도의 logical block으로 넘어가는 경우에만 **1 blank line** 유지 |
 
-### 3.1 Function Body Spacing
+### 3.1 Top-level Definition Spacing
+
+최상위 class와 function 선언 전에는 2 blank lines를 유지한다.
+
+파일의 첫 번째 최상위 선언에는 선행 blank line을 요구하지 않는다.
+
+decorator가 있는 경우 decorator를 선언의 시작으로 취급한다.
+
+예시:
+
+```python
+def load_config() -> Config:
+    ...
+
+
+def run() -> None:
+    ...
+
+
+class Application:
+    ...
+```
+
+### 3.2 Function Body Spacing
 
 function 또는 method body는 선언문 또는 docstring 바로 다음에서 시작한다.
 
@@ -121,7 +143,7 @@ def process(data: Data) -> Result:
     return build_result(validated_data=validated_data)
 ```
 
-### 3.2 Logical Block Spacing
+### 3.3 Logical Block Spacing
 
 Blank line은 단순히 코드를 보기 좋게 꾸미기 위한 용도가 아니라, 처리 단계의 경계를 표현하기 위해 사용한다.
 
@@ -150,7 +172,7 @@ Blank line은 단순히 코드를 보기 좋게 꾸미기 위한 용도가 아�
 > 디버깅, 리뷰, 장기 유지보수 과정에서 컨텍스트를 따라가는 비용을 줄인다. 목표는 의미 있는 처리 단계를 드러내되, 단순한 직선 흐름의 함수를 불필요하게 장황하게 만들지 않는 것이다.
 > 
 
-### 3.3 Return Spacing
+### 3.4 Return Spacing
 
 `return`은 새로운 logical block의 시작이 아니라 현재 logical block의 종료로 취급한다.
 
@@ -186,7 +208,7 @@ if article is None:
 return article
 ```
 
-### 3.4 반복되는 독립 작업
+### 3.5 반복되는 독립 작업
 
 반복되는 작업이 각각 독립적인 의미를 가진다면 작업 단위마다 1 blank line으로 구분한다.
 
@@ -216,7 +238,7 @@ config.add_argument(...)
 config.add_argument(...)
 ```
 
-### 3.5 짧은 Wrapper Method
+### 3.6 짧은 Wrapper Method
 
 단순한 wrapper method는 최대한 압축된 형태를 유지한다.
 
@@ -245,7 +267,7 @@ async def execute(self, request: Request) -> Response:
     return await self.handler.execute(request=request)
 ```
 
-### 3.6 Dictionary Literal Spacing
+### 3.7 Dictionary Literal Spacing
 
 비어 있지 않은 single-line dictionary literal은 여는 중괄호(`{`)와 첫 번째 항목 사이, 마지막 항목과 닫는 중괄호(`}`) 사이에 각각 **1 space**를 둔다.
 
@@ -273,24 +295,58 @@ empty_data = {}
 ```python
 user = {
     "name": "test",
-    "enabled": True
+    "enabled": True,
 }
 ```
 
-### 3.7 줄바꿈
+### 3.8 줄바꿈
 
-Dictionary literal, list literal, function argument, chained expression은 여러 줄로 펼쳤을 때 가독성이 좋아진다면 multi-line 형태로 작성할 수 있다.
+Dictionary literal, list literal, function argument, chained expression은 여러 줄로 펼쳤을 때 의미 구조와 처리 단계를 더 명확하게 드러낼 수 있다면 multi-line 형태로 작성할 수 있다.
 
-argument가 1개뿐이거나 표현식이 짧은 경우에는 named argument를 사용하더라도 single-line 형태를 기본으로 한다.
+줄바꿈 여부는 고정된 line length가 아니라 다음 기준을 바탕으로 판단한다.
+
+- 표현식이 자체적인 내부 구조를 가지는가
+- 여러 값이나 처리 단계의 경계를 구분할 필요가 있는가
+- 중첩 호출, collection literal, comprehension, 조건식, 연산식 등이 포함되어 있는가
+- 주석이나 설명을 보존하기 위해 별도의 줄이 필요한가
 
 느슨한 기준으로, **dictionary literal의 key가 5개 이상이면 multi-line 형태를 우선 고려한다.** 단, 이는 **강제 규칙이 아니다.**
 
-줄바꿈은 고정된 line length보다 **의미 단위의 가독성**을 우선한다.
+인자가 하나인 function call은 해당 인자가 단순한 값이나 참조인 경우 single-line 형태를 기본으로 한다.
+
+```python
+result = service.process(article=article)
+repository.save(data)
+```
+
+유일한 인자가 중첩 호출, collection literal, comprehension, 조건식, 연산식처럼 자체적인 구조를 가진다면 multi-line 형태를 사용할 수 있다.
+
+```python
+result = service.process(
+    article=create_article(
+        metadata=metadata,
+        content=content,
+    ),
+)
+```
+
+```python
+service.process(
+    options={
+        "enabled": True,
+        "timeout": 10,
+    },
+)
+```
+
+줄바꿈 여부를 판단할 때 line length는 독립적인 기준으로 사용하지 않는다.
+
+한 줄의 길이가 짧거나 길다는 사실만으로 표현식을 접거나 펼치지 않는다.
 
 > **설계 의도**
 > 
 
-> 가독성은 문자 수보다 문맥에 따라 달라진다. 줄바꿈은 고정된 최대 길이를 맞추기 위한 것이 아니라, 논리 구조를 드러내고 복잡한 표현식을 더 쉽게 읽을 수 있도록 하기 위해 사용한다.
+> 가독성은 문자 수보다 문맥과 표현식의 구조에 따라 달라진다. 줄바꿈은 고정된 최대 길이를 맞추기 위한 것이 아니라, 논리 구조와 처리 단계의 경계를 드러내고 복잡한 표현식을 더 쉽게 읽을 수 있도록 하기 위해 사용한다.
 > 
 
 ---
@@ -395,23 +451,70 @@ article_metadata: dict[str, Any] = article.metadata
 
 ### 4.7 Config 네이밍
 
-설정 객체는 `_config` suffix를 사용한다.
+설정값을 구조화하여 보관하는 설정 객체는 `_config` suffix를 사용한다.
 
 prefix에는 해당 설정이 무엇에 대한 설정인지 드러나야 한다.
 
 예시:
 
 ```python
-path_config
-runtime_config
-color_map_config
+path_config: PathConfig
+runtime_config = RuntimeConfig()
+color_map_config: ColorMapConfig = load_color_map_config()
 ```
+
+설정을 읽거나 해석하거나 생성하거나 제공하는 역할의 객체에는 이 규칙을 적용하지 않는다.
+
+```python
+config_loader = ConfigLoader()
+config_parser = ConfigParser()
+config_builder = ConfigBuilder()
+config_provider = ConfigProvider()
+```
+
+설정 데이터 객체와 설정을 처리하는 객체는 이름만으로 구분할 수 있어야 한다.
+
+> **설계 의도**
+> 
+
+> `_config` suffix는 설정값을 보관하는 데이터 객체를 명확하게 식별하기 위해 사용한다.
+> 
+
+> 설정을 처리하는 loader, parser, builder, provider 등의 역할까지 `_config`로 통일하면 객체의 실제 책임이 흐려질 수 있으므로 구분한다.
+> 
 
 ### 4.8 Named Argument Preference
 
 Function 또는 method 호출 시에는 positional argument보다 named argument 사용을 기본으로 한다.
 
 특히 동일한 타입의 인자가 여러 개 존재하거나, boolean 값, 설정값, 옵션값이 포함된 경우에는 named argument 사용을 권장한다.
+
+`True`와 `False` 같은 boolean literal은 값 자체만으로 의미를 설명하지 못하므로 원칙적으로 named argument로 전달한다.
+
+```python
+create_user(
+    user_id=user_id,
+    is_admin=True,
+)
+
+request.execute(should_retry=False)
+```
+
+다음과 같이 boolean literal을 positional argument로 전달하는 것은 권장하지 않는다.
+
+```python
+create_user(user_id, True)
+request.execute(False)
+```
+
+변수나 expression을 통해 전달되는 boolean 값은 호출부의 문맥과 API 관례를 함께 고려한다.
+
+```python
+create_user(
+    user_id=user_id,
+    is_admin=is_admin,
+)
+```
 
 다만 Python 표준 라이브러리, 내장 함수, 외부 라이브러리 등에서 positional argument 사용이 일반적인 경우에는 해당 라이브러리의 관례를 따른다.
 
@@ -436,13 +539,51 @@ user = service.create_user(
 
 ### 4.8.1 Function Call Formatting
 
-인자가 하나이고 한 줄에 충분히 표현 가능한 경우에는 single-line call을 유지한다.
+Function call의 single-line 또는 multi-line 형태는 line length가 아니라 인자의 개수와 expression의 구조를 기준으로 결정한다.
+
+인자가 하나이고 해당 인자가 단순한 값 또는 참조인 경우에는 single-line call을 유지한다.
 
 ```python
 result: Result[Article] = service.process(article=article)
+repository.save(data)
+set_enabled(value=True)
 ```
 
-인자가 여러 개이거나 한 줄에서 가독성이 떨어지는 경우에는 multi-line call을 사용한다.
+단순한 인자 하나만을 별도의 줄로 분리하는 것은 권장하지 않는다.
+
+```python
+result: Result[Article] = service.process(
+    article=article,
+)
+```
+
+유일한 인자가 자체적인 expression 구조를 가지거나, 호출과 인자 내부의 처리 단계를 구분할 필요가 있는 경우에는 multi-line call을 사용할 수 있다.
+
+```python
+result: Result[Article] = service.process(
+    article=create_article(
+        metadata=metadata,
+        content=content,
+    ),
+)
+```
+
+```python
+service.process(
+    options={
+        "enabled": True,
+        "timeout": 10,
+    },
+)
+```
+
+```python
+service.process(
+    value=primary_value if condition else fallback_value,
+)
+```
+
+인자가 여러 개인 경우에도 각 인자의 역할과 호출 구조를 명확하게 드러내는 형태를 선택한다.
 
 ```python
 user = service.create_user(
@@ -452,13 +593,19 @@ user = service.create_user(
 )
 ```
 
-인자가 하나뿐이고 한 줄에 충분히 표현 가능한데도 multi-line call로 펼치는 것은 권장하지 않는다.
+다음과 같은 경우에는 인자가 하나뿐이더라도 multi-line call을 허용한다.
 
-```python
-result: Result[Article] = service.process(
-    article=article,
-)
-```
+- nested call
+- dictionary, list, set, tuple literal
+- comprehension 또는 generator expression
+- conditional expression
+- binary 또는 boolean expression
+- lambda expression
+- multi-line string
+- argument에 설명 주석이 존재하는 경우
+- `*args` 또는 `**kwargs`를 사용하는 경우
+
+이 규칙은 line length를 기준으로 판단하지 않는다.
 
 > **운영 기준**
 > 
@@ -541,12 +688,15 @@ from dataclasses import dataclass
 from enum import StrEnum
 from typing import Generic, TypeVar
 
+
 T = TypeVar("T")
+
 
 class ResultCode(StrEnum):
     SUCCESS = "SUCCESS"
     IGNORED = "IGNORED"
     FAILED = "FAILED"
+
 
 @dataclass(slots=True)
 class Result(Generic[T]):
@@ -882,6 +1032,7 @@ from project.logging.logging import Logging
 from project.config.default_config import default_config
 from project.config.runtime_config import runtime_config
 
+
 class ArticleService:
     """
     Manage article processing and rendering.
@@ -914,7 +1065,7 @@ class ArticleService:
 
 다만 본 문서에서 정의하는 logical block spacing, import segment grouping, Result Object convention처럼 프로젝트 맥락을 보존하기 위한 규칙은 별도 검사기 또는 code review 기준으로 관리한다.
 
-기존 formatter나 linter로 안정적으로 검사하기 어려운 프로젝트 고유 규칙은 의도적으로 자동 포맷팅 대상에서 제외하며, 향후 전용 검사기를 통해 검증할 예정이다.
+기존 formatter나 linter로 안정적으로 검사하기 어려운 프로젝트 고유 규칙은 의도적으로 자동 포맷팅 대상에서 제외하며, 기계적으로 판정 가능한 부분은 `tests/test_python_style.py`에서 검증한다.
 
 자동 검증 가능한 규칙은 formatter, linter, import sorter, pre-commit hook, CI 단계에서 점진적으로 적용한다.
 
@@ -930,21 +1081,26 @@ logical stage 구분, naming intent, 책임 분리처럼 사람의 설계 판단
 
 | Category | Rule | Current Enforcement | CI Level | Future Custom Tool | Review Required |
 | --- | --- | --- | --- | --- | --- |
-| Basic Style | indentation / tabs | formatter / editorconfig | Error | possible | Low |
-| Basic Style | string quote style | formatter | Error | possible | Low |
+| Basic Style | indentation / tabs | custom Pytest checker | Error | implemented | Low |
+| Basic Style | string quote style | custom Pytest checker | Error | implemented | Low |
+| Basic Style | single-line dictionary inner spacing | custom Pytest checker | Error | implemented | Low |
 | Docstring | module / class / function docstring layout | formatter / linter | Error | possible | Low |
 | Blank Line | function body spacing | formatter | Error | possible | Low |
 | Blank Line | logical block spacing | code review | Review | partially possible | High |
 | Blank Line | return spacing | custom checker | Review | partially possible | Medium |
 | Blank Line | short wrapper method spacing | custom checker | Review | partially possible | Medium |
 | Line Breaking | semantic line breaking | code review | Review | difficult | High |
-| Import | standard / third-party / first-party / group order | import sorter | Error | possible | Low |
+| Line Breaking | simple single-argument call formatting | custom Pytest checker | Error | implemented | Medium |
+| Line Breaking | multi-line call trailing comma | custom Pytest checker | Error | implemented | Low |
+| Import | standard / third-party / first-party / group order | custom Pytest checker | Error | implemented | Low |
 | Import | reserved segment order | custom checker | Error | possible | Low |
 | Import | dynamic project layer segment grouping | custom checker | Error | possible | Medium |
 | Naming | class / function / method naming format | linter | Error | possible | Low |
-| Naming | boolean prefix recommendation | advisory linter | Review | possible | Medium |
+| Naming | configuration object `_config` suffix | code review | Review | possible | Medium |
+| Naming | named argument for boolean literals | code review | Review | possible | Low |
+| Naming | boolean naming recommendation | code review | Review | difficult | High |
 | Naming | semantic variable name | code review | Review | difficult | High |
-| Result Object | result object field consistency | type checker / linter | Error | possible | Medium |
+| Result Object | result object field consistency | type checker / custom checker | Error | implemented | Medium |
 | Exception | result vs exception boundary | code review | Review | partially possible | High |
 | Architecture | responsibility and layer boundary | architecture review | Review | difficult | High |
 
@@ -1008,7 +1164,7 @@ def process(data: Data) -> Result:
     if response_data['error']:
         raise ClientError(response_data['message'])
 
-    result = build_result(response_data)
+    result = build_result(response_data=response_data)
     return result
 ```
 
@@ -1072,7 +1228,7 @@ def get_result(data: Data) -> Result:
 
 ```python
 def get_article(article_id: int) -> Article:
-    article = repository.find_by_id(article_id)
+    article = repository.find_by_id(article_id=article_id)
     if article is None:
         raise ArticleNotFoundError("Article not found")
 
@@ -1161,7 +1317,7 @@ key가 많고 의미 단위가 여러 개라 multi-line이 적합하다.
 ### Good
 
 ```python
-payload = {"article_id": article_id, "author_id": author_id}
+payload = { "article_id": article_id, "author_id": author_id }
 ```
 
 값의 개수가 적고 의미가 단순하므로 single-line이 적합하다.
@@ -1185,7 +1341,7 @@ key가 5개 미만이어도 의미 단위를 분명하게 보여주는 편이 �
 ### Avoid
 
 ```python
-payload = {"article_id": article_id, "author_id": author_id, "created_at": created_at, "updated_at": updated_at, "is_deleted": False, "visibility": visibility}
+payload = { "article_id": article_id, "author_id": author_id, "created_at": created_at, "updated_at": updated_at, "is_deleted": False, "visibility": visibility }
 ```
 
 key가 많아 한 줄에서 구조를 파악하기 어렵다.
@@ -1207,7 +1363,7 @@ result: Result[Article] = service.process(article=article)
 - 프로젝트의 기본 작성 방식이다.
 - 정적 타입 정보가 명시되어 있다.
 - 호출부에서 named argument를 사용해 값의 의미가 명확하다.
-- 인자가 하나이고 한 줄에 충분히 표현 가능하므로 single-line call을 유지한다.
+- `service.process()`의 유일한 인자가 단순한 참조이므로 single-line call을 유지한다.
 - IDE 지원, 리팩터링 안정성, 코드 탐색성을 높일 수 있다.
 - `Pyright Standard` 기준에서 안정적인 타입 분석이 가능하다.
 
@@ -1254,8 +1410,9 @@ result: Result[Article] = service.process(
 )
 ```
 
-- 인자가 하나뿐이고 한 줄에 충분히 표현 가능하다.
-- multi-line call이 가독성을 높이지 않고 세로 공간만 늘린다.
+- 유일한 인자가 단순한 변수 참조다.
+- multi-line 형태로 분리해도 추가적인 표현식 구조나 처리 단계가 드러나지 않는다.
+- multi-line call이 의미적 정보를 추가하지 않고 세로 공간만 늘린다.
 - 이 경우에는 `service.process(article=article)` 형태를 우선한다.
 
 ---
@@ -1311,12 +1468,15 @@ from dataclasses import dataclass
 from enum import StrEnum
 from typing import Generic, TypeVar
 
+
 T = TypeVar("T")
+
 
 class ResultCode(StrEnum):
     SUCCESS = "SUCCESS"
     IGNORED = "IGNORED"
     FAILED = "FAILED"
+
 
 @dataclass(slots=True)
 class Result(Generic[T]):
@@ -1492,6 +1652,8 @@ import origin이 섞여 있어 파일의 의존성을 파악하기 어렵다.
 
 이 섹션은 규칙을 강제하기 위한 것이 아니라, 동일한 문제 상황에서 일관된 의사결정을 내릴 수 있도록 돕기 위해 존재한다.
 
-실제 프로젝트에서는 코드 길이, 책임 범위, 가독성, 팀 컨벤션, 자동화 가능 여부를 함께 고려하여 판단한다.
+실제 프로젝트에서는 책임 범위, 표현식 구조, 처리 단계, 가독성, 팀 컨벤션, 자동화 가능 여부를 함께 고려하여 판단한다.
 
 특히 blank line은 “코드가 여러 줄이다”라는 이유가 아니라, **책임 있는 처리 단계가 분리되었는가**를 기준으로 사용한다.
+
+Function call과 expression의 줄바꿈은 “한 줄에 들어가는가”가 아니라, **구조와 처리 단계를 별도의 줄로 드러낼 필요가 있는가**를 기준으로 판단한다.
