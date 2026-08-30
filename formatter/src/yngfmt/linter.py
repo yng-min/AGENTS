@@ -4,16 +4,17 @@ Style guide linter engine.
 
 from __future__ import annotations
 
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Iterable, Sequence
 import ast
 import io
 import re
 import tokenize
 import tomllib
-from dataclasses import dataclass
-from pathlib import Path
-from typing import Iterable, Sequence
 
 from yngfmt.imports import ImportConfig, check_imports
+from yngfmt.mechanical_rules import check_mechanical_rules
 
 
 _SNAKE_CASE_PATTERN = re.compile(r"^[a-z_][a-z0-9_]*$")
@@ -53,7 +54,7 @@ def load_result_config(pyproject_path: Path | None) -> ResultConfig:
         typed_dict_names=strings("typed-dict-names", ResultConfig.typed_dict_names),
         required_fields=strings("required-fields", ResultConfig.required_fields),
         marker_fields=strings("marker-fields", ResultConfig.marker_fields),
-        aliases=strings("aliases", ResultConfig.aliases)
+        aliases=strings("aliases", ResultConfig.aliases),
     )
 
 
@@ -90,7 +91,7 @@ class StyleGuideVisitor(ast.NodeVisitor):
                 column=getattr(node, "col_offset", 0) + 1,
                 code=code,
                 message=message,
-                severity=severity
+                severity=severity,
             )
         )
 
@@ -191,13 +192,37 @@ def _check_tokens(source: str, path: Path, tree: ast.AST) -> list[Diagnostic]:
         position = token.start
         is_docstring = position in docstrings
         if is_docstring and quote != '\"\"\"':
-            diagnostics.append(Diagnostic(path, token.start[0], token.start[1] + 1, "YNG102", "docstring must use triple double quotes"))
-        elif not is_docstring and position not in subscripts and "f" not in prefix.lower() and quote in {"'", "'" * 3}:
-            diagnostics.append(Diagnostic(path, token.start[0], token.start[1] + 1, "YNG101", "string must use double quotes"))
+            diagnostics.append(
+                Diagnostic(
+                    path,
+                    token.start[0],
+                    token.start[1] + 1,
+                    "YNG102",
+                    "docstring must use triple double quotes",
+                )
+            )
+        elif not is_docstring and position not in subscripts and quote in {"'", "'" * 3}:
+            diagnostics.append(
+                Diagnostic(
+                    path,
+                    token.start[0],
+                    token.start[1] + 1,
+                    "YNG101",
+                    "string must use double quotes",
+                )
+            )
 
     for line_number, line in enumerate(source.splitlines(), start=1):
         if "\t" in line:
-            diagnostics.append(Diagnostic(path, line_number, line.index("\t") + 1, "YNG001", "tabs are not allowed"))
+            diagnostics.append(
+                Diagnostic(
+                    path,
+                    line_number,
+                    line.index("\t") + 1,
+                    "YNG001",
+                    "tabs are not allowed",
+                )
+            )
     return diagnostics
 
 
@@ -214,9 +239,17 @@ def _check_subscript_quotes(source: str, path: Path, tree: ast.AST) -> list[Diag
             and slice_node.lineno == slice_node.end_lineno
         ):
             continue
-        segment = lines[slice_node.lineno - 1][slice_node.col_offset:slice_node.end_col_offset]
+        segment = lines[slice_node.lineno - 1][slice_node.col_offset : slice_node.end_col_offset]
         if not segment.startswith("'"):
-            diagnostics.append(Diagnostic(path, slice_node.lineno, slice_node.col_offset + 1, "YNG103", "dictionary key access must use single quotes"))
+            diagnostics.append(
+                Diagnostic(
+                    path,
+                    slice_node.lineno,
+                    slice_node.col_offset + 1,
+                    "YNG103",
+                    "dictionary key access must use single quotes",
+                )
+            )
     return diagnostics
 
 
@@ -235,7 +268,15 @@ def _check_docstring_layout(tree: ast.Module, path: Path) -> list[Diagnostic]:
     if tree.body and _is_docstring_statement(tree.body[0]) and len(tree.body) > 1:
         docstring = tree.body[0]
         if _blank_lines_between(docstring, tree.body[1]) != 1:
-            diagnostics.append(Diagnostic(path, docstring.lineno, docstring.col_offset + 1, "YNG104", "module docstring must be followed by exactly one blank line"))
+            diagnostics.append(
+                Diagnostic(
+                    path,
+                    docstring.lineno,
+                    docstring.col_offset + 1,
+                    "YNG104",
+                    "module docstring must be followed by exactly one blank line",
+                )
+            )
 
     for node in ast.walk(tree):
         if not isinstance(node, (ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef)):
@@ -246,12 +287,23 @@ def _check_docstring_layout(tree: ast.Module, path: Path) -> list[Diagnostic]:
             continue
         code = "YNG105" if isinstance(node, ast.ClassDef) else "YNG106"
         subject = "class" if isinstance(node, ast.ClassDef) else "function"
-        diagnostics.append(Diagnostic(path, node.body[1].lineno, node.body[1].col_offset + 1, code, f"{subject} docstring must not be followed by a blank line"))
+        diagnostics.append(
+            Diagnostic(
+                path,
+                node.body[1].lineno,
+                node.body[1].col_offset + 1,
+                code,
+                f"{subject} docstring must not be followed by a blank line",
+            )
+        )
     return diagnostics
 
 
-def _definition_header_end_line(source: str, node: ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef) -> int:
-    fragment = "".join(source.splitlines(keepends=True)[node.lineno - 1:])
+def _definition_header_end_line(
+    source: str,
+    node: ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef,
+) -> int:
+    fragment = "".join(source.splitlines(keepends=True)[node.lineno - 1 :])
     depth = 0
     for token in tokenize.generate_tokens(io.StringIO(fragment).readline):
         if token.type != tokenize.OP:
@@ -265,7 +317,11 @@ def _definition_header_end_line(source: str, node: ast.ClassDef | ast.FunctionDe
     return node.lineno
 
 
-def _check_definition_spacing(source: str, tree: ast.Module, path: Path) -> list[Diagnostic]:
+def _check_definition_spacing(
+    source: str,
+    tree: ast.Module,
+    path: Path,
+) -> list[Diagnostic]:
     diagnostics: list[Diagnostic] = []
     definitions = (ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef)
 
@@ -273,26 +329,56 @@ def _check_definition_spacing(source: str, tree: ast.Module, path: Path) -> list
         if isinstance(current, definitions):
             previous_end = previous.end_lineno or previous.lineno
             if _first_code_line(current) - previous_end - 1 != 2:
-                diagnostics.append(Diagnostic(path, _first_code_line(current), 1, "YNG401", "top-level definition must be preceded by two blank lines"))
+                diagnostics.append(
+                    Diagnostic(
+                        path,
+                        _first_code_line(current),
+                        1,
+                        "YNG401",
+                        "top-level definition must be preceded by two blank lines",
+                    )
+                )
 
     for node in ast.walk(tree):
         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.body:
-            header_end = _definition_header_end_line(source, node)
+            header_end = _definition_header_end_line(source=source, node=node)
             if node.body[0].lineno - header_end - 1 > 0:
-                diagnostics.append(Diagnostic(path, node.body[0].lineno, node.body[0].col_offset + 1, "YNG403", "function body must start immediately after the declaration"))
+                diagnostics.append(
+                    Diagnostic(
+                        path,
+                        node.body[0].lineno,
+                        node.body[0].col_offset + 1,
+                        "YNG403",
+                        "function body must start immediately after the declaration",
+                    )
+                )
 
     for class_node in (node for node in ast.walk(tree) if isinstance(node, ast.ClassDef)):
         body = class_node.body
         start = 1 if body and _is_docstring_statement(body[0]) else 0
-        methods = [node for node in body[start:] if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))]
+        methods = [
+            node
+            for node in body[start:]
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+        ]
         for previous, current in zip(methods, methods[1:]):
             previous_end = previous.end_lineno or previous.lineno
             if _first_code_line(current) - previous_end - 1 != 1:
-                diagnostics.append(Diagnostic(path, _first_code_line(current), current.col_offset + 1, "YNG402", "class methods must be separated by one blank line"))
+                diagnostics.append(
+                    Diagnostic(
+                        path,
+                        _first_code_line(current),
+                        current.col_offset + 1,
+                        "YNG402",
+                        "class methods must be separated by one blank line",
+                    )
+                )
     return diagnostics
 
 
-def _body_without_docstring(node: ast.FunctionDef | ast.AsyncFunctionDef) -> list[ast.stmt]:
+def _body_without_docstring(
+    node: ast.FunctionDef | ast.AsyncFunctionDef,
+) -> list[ast.stmt]:
     return node.body[1:] if node.body and _is_docstring_statement(node.body[0]) else node.body
 
 
@@ -308,17 +394,48 @@ def _check_wrapper_and_return_spacing(tree: ast.Module, path: Path) -> list[Diag
     for node in ast.walk(tree):
         if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
             continue
-        body = _body_without_docstring(node)
-        if len(body) == 2 and _is_call_statement(body[0]) and isinstance(body[1], ast.Return) and _blank_lines_between(body[0], body[1]) > 0:
-            diagnostics.append(Diagnostic(path, body[1].lineno, body[1].col_offset + 1, "YNG501", "short wrapper preparation and delegation must remain adjacent"))
+        body = _body_without_docstring(node=node)
+        if (
+            len(body) == 2
+            and _is_call_statement(body[0])
+            and isinstance(body[1], ast.Return)
+            and _blank_lines_between(body[0], body[1]) > 0
+        ):
+            diagnostics.append(
+                Diagnostic(
+                    path,
+                    body[1].lineno,
+                    body[1].col_offset + 1,
+                    "YNG501",
+                    "short wrapper preparation and delegation must remain adjacent",
+                )
+            )
 
         for previous, current in zip(body, body[1:]):
             if not isinstance(current, ast.Return) or _blank_lines_between(previous, current) == 0:
                 continue
-            target = previous.targets[0] if isinstance(previous, ast.Assign) else previous.target if isinstance(previous, ast.AnnAssign) else None
+            target = (
+                previous.targets[0]
+                if isinstance(previous, ast.Assign)
+                else previous.target
+                if isinstance(previous, ast.AnnAssign)
+                else None
+            )
             target_name = _target_name(target) if target is not None else None
-            if target_name is not None and isinstance(current.value, ast.Name) and current.value.id == target_name:
-                diagnostics.append(Diagnostic(path, current.lineno, current.col_offset + 1, "YNG502", "return must remain adjacent to the statement producing its value"))
+            if (
+                target_name is not None
+                and isinstance(current.value, ast.Name)
+                and current.value.id == target_name
+            ):
+                diagnostics.append(
+                    Diagnostic(
+                        path,
+                        current.lineno,
+                        current.col_offset + 1,
+                        "YNG502",
+                        "return must remain adjacent to the statement producing its value",
+                    )
+                )
     return diagnostics
 
 
@@ -343,11 +460,17 @@ def _is_typed_dict(node: ast.ClassDef) -> bool:
     return any(_annotation_name(base) == "TypedDict" for base in node.bases)
 
 
-def _assignment_dicts(function: ast.FunctionDef | ast.AsyncFunctionDef) -> dict[str, ast.Dict]:
+def _assignment_dicts(
+    function: ast.FunctionDef | ast.AsyncFunctionDef,
+) -> dict[str, ast.Dict]:
     assignments: dict[str, ast.Dict] = {}
     invalidated: set[str] = set()
     for node in ast.walk(function):
-        if isinstance(node, ast.Assign) and len(node.targets) == 1 and isinstance(node.targets[0], ast.Name):
+        if (
+            isinstance(node, ast.Assign)
+            and len(node.targets) == 1
+            and isinstance(node.targets[0], ast.Name)
+        ):
             name = node.targets[0].id
             if name in assignments:
                 invalidated.add(name)
@@ -368,31 +491,75 @@ def _assignment_dicts(function: ast.FunctionDef | ast.AsyncFunctionDef) -> dict[
     return {name: value for name, value in assignments.items() if name not in invalidated}
 
 
-def _result_candidate(keys: set[str], config: ResultConfig, forced: bool = False) -> bool:
+def _result_candidate(
+    keys: set[str],
+    config: ResultConfig,
+    forced: bool = False,
+) -> bool:
     return forced or bool(keys & set(config.marker_fields)) or bool(keys & set(config.aliases))
 
 
-def _validate_result_keys(keys: set[str], node: ast.AST, path: Path, config: ResultConfig) -> list[Diagnostic]:
+def _validate_result_keys(
+    keys: set[str],
+    node: ast.AST,
+    path: Path,
+    config: ResultConfig,
+) -> list[Diagnostic]:
     aliases = sorted(keys & set(config.aliases))
     if aliases:
-        return [Diagnostic(path, node.lineno, node.col_offset + 1, "YNG602", f"result dictionary uses non-standard field names: {', '.join(aliases)}")]
+        return [
+            Diagnostic(
+                path,
+                node.lineno,
+                node.col_offset + 1,
+                "YNG602",
+                f"result dictionary uses non-standard field names: {', '.join(aliases)}",
+            )
+        ]
 
     missing = sorted(set(config.required_fields) - keys)
     if missing:
-        return [Diagnostic(path, node.lineno, node.col_offset + 1, "YNG601", f"result object is missing required fields: {', '.join(missing)}")]
+        return [
+            Diagnostic(
+                path,
+                node.lineno,
+                node.col_offset + 1,
+                "YNG601",
+                f"result object is missing required fields: {', '.join(missing)}",
+            )
+        ]
     return []
 
 
-def _check_result_objects(tree: ast.Module, path: Path, config: ResultConfig) -> list[Diagnostic]:
+def _check_result_objects(
+    tree: ast.Module,
+    path: Path,
+    config: ResultConfig,
+) -> list[Diagnostic]:
     diagnostics: list[Diagnostic] = []
     result_type_names = set(config.class_names) | set(config.typed_dict_names)
 
     for node in tree.body:
-        if isinstance(node, ast.ClassDef) and node.name in config.typed_dict_names and _is_typed_dict(node):
-            diagnostics.extend(_validate_result_keys(_typed_dict_fields(node), node, path, config))
+        if (
+            isinstance(node, ast.ClassDef)
+            and node.name in config.typed_dict_names
+            and _is_typed_dict(node)
+        ):
+            diagnostics.extend(
+                _validate_result_keys(
+                    keys=_typed_dict_fields(node),
+                    node=node,
+                    path=path,
+                    config=config,
+                )
+            )
 
-    for function in (node for node in ast.walk(tree) if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))):
-        assigned = _assignment_dicts(function)
+    for function in (
+        node
+        for node in ast.walk(tree)
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+    ):
+        assigned = _assignment_dicts(function=function)
         forced = _annotation_name(function.returns) in result_type_names
         returns: list[tuple[ast.Return, set[str]]] = []
 
@@ -408,16 +575,31 @@ def _check_result_objects(tree: ast.Module, path: Path, config: ResultConfig) ->
                 continue
 
             keys = _dictionary_string_keys(dictionary)
-            if keys is None or not _result_candidate(keys, config, forced=forced):
+            if keys is None or not _result_candidate(keys=keys, config=config, forced=forced):
                 continue
-            diagnostics.extend(_validate_result_keys(keys, node, path, config))
+            diagnostics.extend(
+                _validate_result_keys(
+                    keys=keys,
+                    node=node,
+                    path=path,
+                    config=config,
+                )
+            )
             returns.append((node, keys))
 
         if len({frozenset(keys) for _, keys in returns}) > 1:
             baseline = returns[0][1]
             for node, keys in returns[1:]:
                 if keys != baseline:
-                    diagnostics.append(Diagnostic(path, node.lineno, node.col_offset + 1, "YNG603", "result return branches must use the same field set"))
+                    diagnostics.append(
+                        Diagnostic(
+                            path,
+                            node.lineno,
+                            node.col_offset + 1,
+                            "YNG603",
+                            "result return branches must use the same field set",
+                        )
+                    )
     return diagnostics
 
 
@@ -425,7 +607,7 @@ def lint_code(
     source: str,
     path: Path = Path("<string>"),
     import_config: ImportConfig = ImportConfig(),
-    result_config: ResultConfig = ResultConfig()
+    result_config: ResultConfig = ResultConfig(),
 ) -> list[Diagnostic]:
     """
     Lint Python source and return sorted diagnostics.
@@ -441,15 +623,26 @@ def lint_code(
         Diagnostic(path, issue.line, issue.column, issue.code, issue.message)
         for issue in check_imports(source=source, config=import_config)
     ]
+    mechanical_diagnostics: list[Diagnostic] = [
+        Diagnostic(
+            path=path,
+            line=issue.line,
+            column=issue.column,
+            code=issue.code,
+            message=issue.message,
+        )
+        for issue in check_mechanical_rules(source=source, tree=tree)
+    ]
     diagnostics = [
         *visitor.diagnostics,
-        *_check_tokens(source, path, tree),
-        *_check_subscript_quotes(source, path, tree),
-        *_check_docstring_layout(tree, path),
-        *_check_definition_spacing(source, tree, path),
-        *_check_wrapper_and_return_spacing(tree, path),
-        *_check_result_objects(tree, path, result_config),
-        *import_diagnostics
+        *_check_tokens(source=source, path=path, tree=tree),
+        *_check_subscript_quotes(source=source, path=path, tree=tree),
+        *_check_docstring_layout(tree=tree, path=path),
+        *_check_definition_spacing(source=source, tree=tree, path=path),
+        *_check_wrapper_and_return_spacing(tree=tree, path=path),
+        *_check_result_objects(tree=tree, path=path, config=result_config),
+        *mechanical_diagnostics,
+        *import_diagnostics,
     ]
     return sorted(diagnostics, key=lambda item: (item.line, item.column, item.code))
 
@@ -468,7 +661,7 @@ def iter_python_files(paths: Sequence[Path]) -> Iterable[Path]:
 def lint_path(
     path: Path,
     import_config: ImportConfig = ImportConfig(),
-    result_config: ResultConfig = ResultConfig()
+    result_config: ResultConfig = ResultConfig(),
 ) -> list[Diagnostic]:
     """
     Lint one Python file.
@@ -477,5 +670,5 @@ def lint_path(
         source=path.read_text(encoding="utf-8"),
         path=path,
         import_config=import_config,
-        result_config=result_config
+        result_config=result_config,
     )
